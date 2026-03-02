@@ -1,0 +1,6 @@
+@MindMap.Backend_HostAddress = http://localhost:5289
+
+GET {{MindMap.Backend_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
