@@ -7,21 +7,27 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://0.0.0.0:5289
       ConnectionStrings__DefaultConnection: Data Source=/app/data/mindmap.db
-    ports:
-      - "5289:5289"
     volumes:
       - mindmap_data:/app/data
+    networks:
+      - caddy_net
     restart: unless-stopped
 
   frontend:
     build:
       context: ./MindMap.Frontend
       dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-}
     depends_on:
       - backend
-    ports:
-      - "5173:80"
+    networks:
+      - caddy_net
     restart: unless-stopped
 
 volumes:
   mindmap_data:
+
+networks:
+  caddy_net:
+    external: true

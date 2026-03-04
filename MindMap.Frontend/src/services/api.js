@@ -4,7 +4,11 @@ function getDefaultApiBaseUrl() {
   }
   const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:'
   const host = window.location.hostname || 'localhost'
-  return `${protocol}//${host}:5289`
+  const port = window.location.port || ''
+  if (port === '5173') {
+    return `${protocol}//${host}:5289`
+  }
+  return window.location.origin
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || getDefaultApiBaseUrl()
