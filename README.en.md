@@ -13,13 +13,13 @@ This is a collaborative mind map application:
 
 1. User registration/login
 2. Create and edit mind maps
-3. Generate share links and open share pages
-4. Show online users on share page (including self), but cursor positions exclude self
-5. Frontend/backend business APIs use Protobuf binary payloads (`/pb/*`)
+3. Share mind maps for real-time collaboration
+4. Show online users and other users' cursors on share page
+5. Frontend/backend business APIs use Protobuf (`/pb/*`)
 
 ## Local Development
 
-### 1) Start backend
+### Start backend
 
 ```powershell
 cd MindMap.Backend
@@ -28,7 +28,7 @@ dotnet run
 
 Default URL: `http://localhost:5289`
 
-### 2) Start frontend
+### Start frontend
 
 ```powershell
 cd MindMap.Frontend
@@ -38,37 +38,55 @@ npm run dev
 
 Default URL: `http://localhost:5173`
 
-## Run with Docker
+## Docker Deployment (External Caddy Reverse Proxy)
 
-The project includes:
+This project is configured for an existing standalone Caddy container.  
+`docker-compose.yml` does not publish app ports directly; services join external network `caddy_net`.
 
-- Root: `docker-compose.yml`
-- Backend: `MindMap.Backend/Dockerfile`
-- Frontend: `MindMap.Frontend/Dockerfile`
+### 1) Create shared network (one-time)
 
-Run from project root:
+```bash
+docker network create caddy_net
+```
+
+### 2) Connect your Caddy container
+
+```bash
+docker network connect caddy_net <caddy_container_name>
+```
+
+### 3) Start this project
 
 ```bash
 docker compose up -d --build
 ```
 
-Then open:
-
-- Frontend: `http://localhost:5173`
-- Backend: `http://localhost:5289`
-
 Notes:
 
-- SQLite data is persisted via Docker volume `mindmap_data`.
+- Frontend service: `frontend` (internal port `80`)
+- Backend service: `backend` (internal port `5289`)
+- SQLite volume: `mindmap_data` (persistent)
 
-## LAN Testing
+### 4) Caddyfile example
 
-- Backend can bind to `0.0.0.0:5289`
-- Frontend Vite dev/preview can bind to `0.0.0.0:5173`
-- Access via machine IP, for example:
-  - `http://192.168.1.20:5173`
+```caddy
+your-domain.com {
+  encode gzip zstd
+
+  @api path /api/* /pb/* /hubs/*
+  reverse_proxy @api backend:5289
+
+  reverse_proxy frontend:80
+}
+```
+
+Reload Caddy:
+
+```bash
+docker exec <caddy_container_name> caddy reload --config /etc/caddy/Caddyfile
+```
 
 ## Notes
 
-- Online cursor sync on share page is implemented with SignalR.
+- Share-page cursor sync uses SignalR (`/hubs/share`).
 - Auth/mind map/share CRUD flows mainly use Protobuf endpoints.

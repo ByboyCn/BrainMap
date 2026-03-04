@@ -4,7 +4,7 @@ English version: [README.en.md](./README.en.md)
 
 ## 项目简介
 
-这是一个支持多人分享协作的脑图应用：
+这是一个支持多人协作的脑图应用：
 
 - 后端：`ASP.NET Core` + `SQLite` + `SignalR` + `protobuf-net`
 - 前端：`Vue 3` + `Vite` + `LogicFlow` + `protobufjs`
@@ -13,13 +13,13 @@ English version: [README.en.md](./README.en.md)
 
 1. 用户注册/登录
 2. 新增与编辑脑图
-3. 生成分享链接并进入分享页
-4. 分享页显示在线用户（含自己），鼠标位置仅显示他人
-5. 前后端业务接口通过 Protobuf 二进制通信（`/pb/*`）
+3. 分享脑图并多人实时协作
+4. 分享页展示在线用户和他人鼠标位置
+5. 前后端业务接口通过 Protobuf（`/pb/*`）通信
 
-## 本地开发启动
+## 本地开发
 
-### 1) 启动后端
+### 启动后端
 
 ```powershell
 cd MindMap.Backend
@@ -28,7 +28,7 @@ dotnet run
 
 默认地址：`http://localhost:5289`
 
-### 2) 启动前端
+### 启动前端
 
 ```powershell
 cd MindMap.Frontend
@@ -38,37 +38,54 @@ npm run dev
 
 默认地址：`http://localhost:5173`
 
-## Docker 启动
+## Docker 部署（外部 Caddy 反代）
 
-项目已提供以下文件：
+项目默认按“已有 Caddy 单独运行”设计，`docker-compose.yml` 不再直接暴露前后端端口，而是接入外部网络 `caddy_net`。
 
-- 根目录：`docker-compose.yml`
-- 后端：`MindMap.Backend/Dockerfile`
-- 前端：`MindMap.Frontend/Dockerfile`
+### 1) 创建共享网络（仅一次）
 
-在项目根目录执行：
+```bash
+docker network create caddy_net
+```
+
+### 2) 把你的 Caddy 容器接入该网络
+
+```bash
+docker network connect caddy_net <caddy容器名>
+```
+
+### 3) 启动本项目
 
 ```bash
 docker compose up -d --build
 ```
 
-启动后访问：
-
-- 前端：`http://localhost:5173`
-- 后端：`http://localhost:5289`
-
 说明：
 
-- 后端 SQLite 数据通过 Docker 卷 `mindmap_data` 持久化。
+- 前端容器名：`frontend`（内部端口 `80`）
+- 后端容器名：`backend`（内部端口 `5289`）
+- SQLite 数据卷：`mindmap_data`（持久化）
 
-## 局域网测试
+### 4) Caddyfile 反代示例
 
-- 后端可绑定 `0.0.0.0:5289`
-- 前端 Vite 开发/预览可绑定 `0.0.0.0:5173`
-- 可通过机器 IP 访问，例如：
-  - `http://192.168.1.20:5173`
+```caddy
+你的域名 {
+  encode gzip zstd
+
+  @api path /api/* /pb/* /hubs/*
+  reverse_proxy @api backend:5289
+
+  reverse_proxy frontend:80
+}
+```
+
+应用后重载 Caddy：
+
+```bash
+docker exec <caddy容器名> caddy reload --config /etc/caddy/Caddyfile
+```
 
 ## 备注
 
-- 分享页在线鼠标使用 SignalR 实时同步。
+- 分享页在线鼠标使用 SignalR 实时同步（`/hubs/share`）。
 - 认证/脑图/分享相关 CRUD 主要走 Protobuf 接口。
