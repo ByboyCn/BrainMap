@@ -85,14 +85,9 @@ class MindMapNodeModel extends RectNodeModel {
     this.width = width
     this.height = height
     this.radius = isEmpty ? Math.floor(height / 2) : 8
-    const savedAnchorOffsetX = Number(this.properties?.anchorOffsetX || 0)
-    const anchorOffsetX = savedAnchorOffsetX > 0 ? savedAnchorOffsetX : Math.max(1, Math.round(width / 2))
+    const anchorOffsetX = Math.max(1, Math.round(width / 2))
     const fillColor = this.properties?.fillColor || DEFAULT_NODE_FILL
     const strokeColor = this.properties?.strokeColor || DEFAULT_NODE_STROKE
-    this.properties = {
-      ...(this.properties || {}),
-      anchorOffsetX,
-    }
     this.style = {
       ...this.style,
       fill: fillColor,
@@ -258,6 +253,8 @@ const boxSelectRectStyle = ref({})
 const isDragPreviewVisible = ref(false)
 const dragPreviewRectStyle = ref({})
 const hasNodeSelection = computed(() => selectedNodeIds.value.length > 0 || !!selectedNodeId.value)
+const showEditorWatermark = computed(() => !!props.showToolbar && !props.readonly)
+const nodeWidthSnapshot = new Map()
 
 let lf = null
 let suppressSync = false
@@ -753,9 +750,46 @@ function getNodeWidthById(nodeId) {
 function getNodeAnchorOffsetById(nodeId) {
   if (!lf || !nodeId) return Math.round(MIN_NODE_WIDTH / 2)
   const model = lf.getNodeModelById(nodeId)
-  const offsetFromProps = Number(model?.properties?.anchorOffsetX || 0)
-  if (offsetFromProps > 0) return offsetFromProps
   return Math.max(1, Math.round(Number(model?.width || MIN_NODE_WIDTH) / 2))
+}
+
+function refreshNodeWidthSnapshot() {
+  nodeWidthSnapshot.clear()
+  if (!lf) return
+  const graph = lf.getGraphData() || {}
+  const nodes = Array.isArray(graph.nodes) ? graph.nodes : []
+  nodes.forEach((node) => {
+    const nodeId = node?.id
+    if (!nodeId) return
+    nodeWidthSnapshot.set(nodeId, getNodeWidthById(nodeId))
+  })
+}
+
+function handleNodeTextUpdate(event) {
+  if (!lf) return
+  const nodeId = event?.data?.id || event?.id || ''
+  if (!nodeId) {
+    refreshNodeWidthSnapshot()
+    syncToModel()
+    return
+  }
+
+  const currentWidth = getNodeWidthById(nodeId)
+  const previousWidth = Number(nodeWidthSnapshot.get(nodeId) || currentWidth)
+  const deltaWidth = currentWidth - previousWidth
+
+  if (Math.abs(deltaWidth) > 0.001) {
+    const parentId = getDirectParentId(nodeId)
+    if (parentId) {
+      const subtreeIds = collectSubtreeNodeIds(nodeId)
+      if (subtreeIds.length > 0) {
+        lf.graphModel.moveNodes(subtreeIds, deltaWidth / 2, 0, true)
+      }
+    }
+  }
+
+  nodeWidthSnapshot.set(nodeId, currentWidth)
+  syncToModel()
 }
 
 function getChildCenterXByParent(parentId, childId = '') {
@@ -1388,7 +1422,7 @@ function handleKeydown(event) {
     return
   }
 
-  if (!event.ctrlKey && !event.metaKey && !event.altKey && key === 'n' && !selectedNodeId.value) {
+  if (!event.ctrlKey && !event.metaKey && !event.altKey && key === 'n') {
     event.preventDefault()
     createMainNodeByCanvasCenter()
     return
@@ -1490,10 +1524,12 @@ onMounted(() => {
 
   renderFromModel(props.modelValue)
   layoutAllTrees()
+  refreshNodeWidthSnapshot()
   refreshZoomPercent()
 
-  const events = ['history:change', 'node:dragstop', 'node:add', 'node:delete', 'edge:add', 'edge:delete', 'node:text:update']
+  const events = ['history:change', 'node:dragstop', 'node:add', 'node:delete', 'edge:add', 'edge:delete']
   events.forEach((eventName) => lf.on(eventName, syncToModel))
+  lf.on('node:text:update', handleNodeTextUpdate)
   lf.on('graph:transform', ({ transform }) => {
     const scale = Number(transform?.SCALE_X || 1)
     zoomPercent.value = Math.max(1, Math.round(scale * 100))
@@ -1662,6 +1698,7 @@ watch(
         />
       </div>
       <div class="zoom-indicator">{{ t('canvas.zoom') }}: {{ zoomPercent }}%</div>
+      <div v-if="showEditorWatermark" class="canvas-watermark">BrainMap</div>
     </div>
   </div>
 </template>

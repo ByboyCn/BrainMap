@@ -418,6 +418,19 @@ button:disabled {
   pointer-events: none;
 }
 
+.canvas-watermark {
+  position: absolute;
+  right: 12px;
+  bottom: 38px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  color: #5f7598;
+  font-size: 11px;
+  letter-spacing: 0.6px;
+  pointer-events: none;
+}
+
 .share-board {
   position: relative;
 }
