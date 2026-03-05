@@ -59,6 +59,7 @@ const messages = {
     },
     share: {
       title: '分享脑图',
+      mapPrefix: '脑图',
       signalr: 'SignalR 状态',
       displayName: '显示名',
       guestPrefix: '访客-',
@@ -101,6 +102,7 @@ const messages = {
       newNode: '节点',
     },
     todo: {
+      pagePrefix: 'TODO',
       defaultTitle: '新建列表',
       add: '新增',
       archive: '归档',
@@ -198,6 +200,7 @@ const messages = {
     },
     share: {
       title: 'Shared MindMap',
+      mapPrefix: 'MindMap',
       signalr: 'SignalR',
       displayName: 'Display Name',
       guestPrefix: 'Guest-',
@@ -240,6 +243,7 @@ const messages = {
       newNode: 'Node',
     },
     todo: {
+      pagePrefix: 'TODO',
       defaultTitle: 'New List',
       add: 'Add',
       archive: 'Archive',

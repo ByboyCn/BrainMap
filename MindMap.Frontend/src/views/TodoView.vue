@@ -22,6 +22,7 @@ const messageKey = ref('')
 const isLoaded = ref(false)
 const suppressWatch = ref(false)
 const lastSavedSignature = ref('')
+const defaultDocumentTitle = document.title
 let saveTimer = null
 
 const AUTO_SAVE_DELAY_MS = 600
@@ -37,6 +38,10 @@ const todo = reactive({
 
 const message = computed(() => (messageKey.value ? t(messageKey.value) : ''))
 const autoSaveStatus = computed(() => (saving.value ? t('editor.saving') : t('editor.enabled')))
+const todoDisplayTitle = computed(() => {
+  const name = String(todo.title || '').trim() || t('todo.defaultTitle')
+  return `${t('todo.pagePrefix')} + ${name}`
+})
 const currentLocale = computed({
   get: () => (locale.value === 'en' ? 'en' : 'zh'),
   set: (nextLocale) => setLocale(nextLocale === 'en' ? 'en' : 'zh'),
@@ -89,6 +94,7 @@ onBeforeUnmount(() => {
     clearTimeout(saveTimer)
     saveTimer = null
   }
+  document.title = defaultDocumentTitle
 })
 
 watch(
@@ -98,6 +104,14 @@ watch(
     scheduleAutoSave()
   },
   { deep: true }
+)
+
+watch(
+  todoDisplayTitle,
+  (nextTitle) => {
+    document.title = nextTitle || defaultDocumentTitle
+  },
+  { immediate: true }
 )
 
 watch(
@@ -469,6 +483,7 @@ async function backHome() {
 <template>
   <main class="todo-page">
     <section class="todo-shell">
+      <div class="todo-op-title">{{ todoDisplayTitle }}</div>
       <div class="todo-head">
         <div class="todo-title-box">
           <button class="todo-back" @click="backHome">{{ t('share.backHome') }}</button>

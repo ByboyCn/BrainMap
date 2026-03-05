@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { HubConnectionBuilder, LogLevel } from '@microsoft/signalr'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
@@ -55,7 +55,10 @@ const canvasHeight = computed(() => Math.max(420, viewportHeight.value))
 const currentLocale = computed(() => locale.value)
 const currentLocaleLabel = computed(() => (currentLocale.value === 'zh' ? t('app.zh') : t('app.en')))
 const wsMaskText = computed(() => (currentLocale.value === 'en' ? 'WebSocket reconnecting...' : 'ws正在重新连接中'))
-
+const shareDisplayTitle = computed(() => {
+  const name = String(mapTitle.value || '').trim() || String(shareCode || '').trim()
+  return `${t('share.mapPrefix')} + ${name}`
+})
 onMounted(async () => {
   document.addEventListener('click', handleDocumentClick)
   window.addEventListener('resize', handleResize)
@@ -92,10 +95,9 @@ watch(contentJson, () => {
 })
 
 watch(
-  [mapTitle, () => String(shareCode || '')],
-  ([title, code]) => {
-    const safeTitle = String(title || '').trim()
-    document.title = safeTitle || code || defaultDocumentTitle
+  shareDisplayTitle,
+  (nextTitle) => {
+    document.title = nextTitle || defaultDocumentTitle
   },
   { immediate: true }
 )
@@ -397,7 +399,7 @@ function formatHistoryTime(unixMs) {
       />
 
       <div class="share-floating-tools">
-        <div class="share-title">{{ mapTitle || shareCode }}</div>
+        <div class="share-title">{{ shareDisplayTitle }}</div>
         <div class="share-meta">{{ t('share.signalr') }}: {{ connectStateLabel }} | {{ t('share.autoSave') }}: {{ autoSaveStatus }}</div>
         <div class="actions">
           <button class="primary" :disabled="saving" @click="saveShared(true)">{{ t('share.saveShared') }}</button>
@@ -460,3 +462,4 @@ function formatHistoryTime(unixMs) {
     </div>
   </main>
 </template>
+

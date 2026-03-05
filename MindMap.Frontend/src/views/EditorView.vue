@@ -20,6 +20,7 @@ const isLoaded = ref(false)
 const suppressWatch = ref(false)
 const lastSavedSignature = ref('')
 const saveQueued = ref(false)
+const defaultDocumentTitle = document.title
 const map = reactive({
   id: '',
   title: '',
@@ -32,6 +33,10 @@ let saveTimer = null
 const AUTO_SAVE_DELAY_MS = 700
 const message = computed(() => (messageKey.value ? t(messageKey.value) : ''))
 const autoSaveStatus = computed(() => (saving.value ? t('editor.saving') : t('editor.enabled')))
+const mapDisplayTitle = computed(() => {
+  const name = String(map.title || '').trim() || t('home.newMindmapTitle')
+  return `${t('share.mapPrefix')} + ${name}`
+})
 
 onMounted(async () => {
   if (!session.value?.token) {
@@ -49,6 +54,7 @@ onBeforeUnmount(() => {
     clearTimeout(saveTimer)
     saveTimer = null
   }
+  document.title = defaultDocumentTitle
 })
 
 watch(
@@ -58,6 +64,14 @@ watch(
     scheduleAutoSave()
   },
   { deep: false }
+)
+
+watch(
+  mapDisplayTitle,
+  (nextTitle) => {
+    document.title = nextTitle || defaultDocumentTitle
+  },
+  { immediate: true }
 )
 
 function buildSignature() {
@@ -202,7 +216,7 @@ async function backHome() {
   <main class="page">
     <section class="panel editor-page">
       <div class="toolbar">
-        <h1>{{ t('editor.title') }}</h1>
+        <h1>{{ mapDisplayTitle }}</h1>
         <div class="actions">
           <button @click="backHome">{{ t('editor.backHome') }}</button>
         </div>

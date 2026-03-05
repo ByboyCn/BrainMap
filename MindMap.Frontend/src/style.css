@@ -743,6 +743,13 @@ button:disabled {
   overflow: hidden;
 }
 
+.todo-op-title {
+  padding: 10px 12px 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #eef9fb;
+}
+
 .todo-head {
   display: flex;
   justify-content: space-between;
