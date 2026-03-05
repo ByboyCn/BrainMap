@@ -6,7 +6,7 @@ import { useI18n } from 'vue-i18n'
 import MindMapCanvas from '../components/MindMapCanvas.vue'
 import { setLocale } from '../i18n'
 import { getApiBaseUrl, getSession } from '../services/api'
-import { pbAddShareHistory, pbGetShareHistory, pbGetShared, pbUpdateShared } from '../services/pb'
+import { pbAddShareHistory, pbCreateShare, pbGetShareHistory, pbGetShared, pbUpdateShared } from '../services/pb'
 
 const route = useRoute()
 const { t, locale } = useI18n()
@@ -34,6 +34,10 @@ const showWsMask = ref(false)
 const defaultDocumentTitle = document.title
 const shareHistory = ref([])
 const historyLoading = ref(false)
+const session = ref(getSession())
+const mapId = ref('')
+const shareRequireLogin = ref(false)
+const accessSaving = ref(false)
 
 let connection = null
 let lastSentAt = 0
@@ -59,6 +63,7 @@ const shareDisplayTitle = computed(() => {
   const name = String(mapTitle.value || '').trim() || String(shareCode || '').trim()
   return `${t('share.mapPrefix')} + ${name}`
 })
+const canManageShare = computed(() => !!session.value?.token && !!mapId.value)
 onMounted(async () => {
   document.addEventListener('click', handleDocumentClick)
   window.addEventListener('resize', handleResize)
@@ -145,7 +150,9 @@ function scheduleBroadcast() {
 async function loadMap() {
   try {
     const payload = await pbGetShared(shareCode)
+    mapId.value = payload.id || ''
     mapTitle.value = payload.title
+    shareRequireLogin.value = !!payload.shareRequireLogin
     suppressWatch.value = true
     contentJson.value = payload.contentJson || '{"nodes":[],"edges":[]}'
     lastSavedContent.value = contentJson.value
@@ -155,6 +162,21 @@ async function loadMap() {
     error.value = err.message
   } finally {
     suppressWatch.value = false
+  }
+}
+
+async function applyShareAccessMode() {
+  if (!canManageShare.value || accessSaving.value) return
+  accessSaving.value = true
+  error.value = ''
+  try {
+    const result = await pbCreateShare(mapId.value, !!shareRequireLogin.value)
+    shareRequireLogin.value = !!result.requireLogin
+    messageKey.value = 'share.accessSaved'
+  } catch (err) {
+    error.value = err.message
+  } finally {
+    accessSaving.value = false
   }
 }
 
@@ -401,6 +423,14 @@ function formatHistoryTime(unixMs) {
       <div class="share-floating-tools">
         <div class="share-title">{{ shareDisplayTitle }}</div>
         <div class="share-meta">{{ t('share.signalr') }}: {{ connectStateLabel }} | {{ t('share.autoSave') }}: {{ autoSaveStatus }}</div>
+        <div v-if="canManageShare" class="share-access-row">
+          <span class="share-access-label">{{ t('share.accessTitle') }}</span>
+          <select v-model="shareRequireLogin" class="share-access-select">
+            <option :value="false">{{ t('share.accessPublicOperate') }}</option>
+            <option :value="true">{{ t('share.accessLoginOperate') }}</option>
+          </select>
+          <button :disabled="accessSaving" @click="applyShareAccessMode">{{ t('share.applyAccess') }}</button>
+        </div>
         <div class="actions">
           <button class="primary" :disabled="saving" @click="saveShared(true)">{{ t('share.saveShared') }}</button>
           <a href="/">{{ t('share.backHome') }}</a>
