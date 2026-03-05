@@ -16,7 +16,8 @@ const NODE_FONT_SIZE = 15
 const NODE_LINE_HEIGHT = 20
 const NODE_TEXT_HORIZONTAL_PADDING = 3
 const NODE_TEXT_VERTICAL_PADDING = 3
-const NODE_MAX_AUTO_WIDTH = 680
+const NODE_MAX_AUTO_WIDTH = 500
+const DEFAULT_NEW_NODE_TEXT = '节点'
 const OUT_ANCHOR_SUFFIX = '_right'
 const IN_ANCHOR_SUFFIX = '_left'
 const CHILD_HORIZONTAL_GAP = 80
@@ -65,13 +66,24 @@ function calculateNodeAutoSize(textConfig) {
   }
 
   const lines = String(text || '').split(/\r?\n/)
-  const lineCount = Math.max(1, lines.length)
-  const maxUnits = lines.reduce((max, line) => Math.max(max, estimateLineUnits(line)), 1)
-  const textWidth = Math.ceil(maxUnits * NODE_FONT_SIZE)
-  const width = Math.min(
-    NODE_MAX_AUTO_WIDTH,
-    Math.max(MIN_NODE_WIDTH, textWidth + NODE_TEXT_HORIZONTAL_PADDING * 2)
-  )
+  const maxTextWidth = Math.max(1, NODE_MAX_AUTO_WIDTH - NODE_TEXT_HORIZONTAL_PADDING * 2)
+  const maxUnitsPerLine = Math.max(1, maxTextWidth / NODE_FONT_SIZE)
+  let lineCount = 0
+  let maxUnits = 1
+
+  lines.forEach((line) => {
+    const units = Math.max(1, estimateLineUnits(line))
+    const wrappedCount = Math.max(1, Math.ceil(units / maxUnitsPerLine))
+    lineCount += wrappedCount
+    if (wrappedCount > 1) {
+      maxUnits = Math.max(maxUnits, maxUnitsPerLine)
+    } else {
+      maxUnits = Math.max(maxUnits, units)
+    }
+  })
+
+  const textWidth = Math.ceil(Math.min(maxTextWidth, maxUnits * NODE_FONT_SIZE))
+  const width = Math.min(NODE_MAX_AUTO_WIDTH, Math.max(MIN_NODE_WIDTH, textWidth + NODE_TEXT_HORIZONTAL_PADDING * 2))
   const height = Math.max(
     MIN_NODE_HEIGHT,
     lineCount * NODE_LINE_HEIGHT + NODE_TEXT_VERTICAL_PADDING * 2
@@ -254,7 +266,6 @@ const isDragPreviewVisible = ref(false)
 const dragPreviewRectStyle = ref({})
 const hasNodeSelection = computed(() => selectedNodeIds.value.length > 0 || !!selectedNodeId.value)
 const showEditorWatermark = computed(() => !!props.showToolbar && !props.readonly)
-const nodeWidthSnapshot = new Map()
 
 let lf = null
 let suppressSync = false
@@ -476,7 +487,7 @@ function createMainNodeAt(graphX, graphY) {
     type: MINDMAP_NODE_TYPE,
     x: graphX,
     y: graphY,
-    text: '',
+    text: DEFAULT_NEW_NODE_TEXT,
     properties: {
       fillColor: selectedNodeColor.value || DEFAULT_NODE_FILL,
       strokeColor: DEFAULT_NODE_STROKE,
@@ -622,7 +633,7 @@ function addNodeWithParent(parentNode, x, y) {
     type: MINDMAP_NODE_TYPE,
     x,
     y,
-    text: t('canvas.newNode'),
+    text: DEFAULT_NEW_NODE_TEXT,
     properties: {
       fillColor: selectedNodeColor.value || DEFAULT_NODE_FILL,
       strokeColor: DEFAULT_NODE_STROKE,
@@ -647,7 +658,7 @@ function addFreeNode() {
     type: MINDMAP_NODE_TYPE,
     x,
     y,
-    text: t('canvas.newNode'),
+    text: DEFAULT_NEW_NODE_TEXT,
     properties: {
       fillColor: selectedNodeColor.value || DEFAULT_NODE_FILL,
       strokeColor: DEFAULT_NODE_STROKE,
@@ -742,54 +753,17 @@ function getAppendChildY(parentId, fallbackY = 0) {
   return Math.max(...childYs) + 1
 }
 
-function getNodeWidthById(nodeId) {
-  if (!lf || !nodeId) return MIN_NODE_WIDTH
-  return Number(lf.getNodeModelById(nodeId)?.width || MIN_NODE_WIDTH)
-}
-
 function getNodeAnchorOffsetById(nodeId) {
   if (!lf || !nodeId) return Math.round(MIN_NODE_WIDTH / 2)
   const model = lf.getNodeModelById(nodeId)
   return Math.max(1, Math.round(Number(model?.width || MIN_NODE_WIDTH) / 2))
 }
 
-function refreshNodeWidthSnapshot() {
-  nodeWidthSnapshot.clear()
-  if (!lf) return
-  const graph = lf.getGraphData() || {}
-  const nodes = Array.isArray(graph.nodes) ? graph.nodes : []
-  nodes.forEach((node) => {
-    const nodeId = node?.id
-    if (!nodeId) return
-    nodeWidthSnapshot.set(nodeId, getNodeWidthById(nodeId))
-  })
-}
-
 function handleNodeTextUpdate(event) {
   if (!lf) return
   const nodeId = event?.data?.id || event?.id || ''
-  if (!nodeId) {
-    refreshNodeWidthSnapshot()
-    syncToModel()
-    return
-  }
-
-  const currentWidth = getNodeWidthById(nodeId)
-  const previousWidth = Number(nodeWidthSnapshot.get(nodeId) || currentWidth)
-  const deltaWidth = currentWidth - previousWidth
-
-  if (Math.abs(deltaWidth) > 0.001) {
-    const parentId = getDirectParentId(nodeId)
-    if (parentId) {
-      const subtreeIds = collectSubtreeNodeIds(nodeId)
-      if (subtreeIds.length > 0) {
-        lf.graphModel.moveNodes(subtreeIds, deltaWidth / 2, 0, true)
-      }
-    }
-  }
-
-  nodeWidthSnapshot.set(nodeId, currentWidth)
-  syncToModel()
+  if (!nodeId) return
+  layoutAllTrees()
 }
 
 function getChildCenterXByParent(parentId, childId = '') {
@@ -1511,6 +1485,7 @@ onMounted(() => {
     },
     nodeText: {
       fontSize: 15,
+      overflowMode: 'autoWrap',
     },
     inputText: {
       fontSize: 15,
@@ -1524,7 +1499,6 @@ onMounted(() => {
 
   renderFromModel(props.modelValue)
   layoutAllTrees()
-  refreshNodeWidthSnapshot()
   refreshZoomPercent()
 
   const events = ['history:change', 'node:dragstop', 'node:add', 'node:delete', 'edge:add', 'edge:delete']
