@@ -1,7 +1,7 @@
 ﻿<script setup>
 import { HubConnectionBuilder, LogLevel } from '@microsoft/signalr'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import MindMapCanvas from '../components/MindMapCanvas.vue'
 import { setLocale } from '../i18n'
@@ -9,6 +9,7 @@ import { getApiBaseUrl, getSession } from '../services/api'
 import { pbAddShareHistory, pbCreateShare, pbGetShared, pbUpdateShared } from '../services/pb'
 
 const route = useRoute()
+const router = useRouter()
 const { t, locale } = useI18n()
 const shareCode = route.params.shareCode
 const mapTitle = ref('')
@@ -29,6 +30,10 @@ const remoteApplying = ref(false)
 const viewportHeight = ref(window.innerHeight)
 const menuOpen = ref(false)
 const menuRef = ref(null)
+const settingsOpen = ref(false)
+const settingsRef = ref(null)
+const onlineOpen = ref(false)
+const onlineRef = ref(null)
 const hadConnectedOnce = ref(false)
 const showWsMask = ref(false)
 const defaultDocumentTitle = document.title
@@ -62,6 +67,7 @@ const shareDisplayTitle = computed(() => {
 })
 const canManageShare = computed(() => !!session.value?.token && !!mapId.value)
 const isAuthenticated = computed(() => !!session.value?.token)
+const shareModeLabel = computed(() => (canEditShared.value ? t('share.modeEditable') : t('share.modeReadonly')))
 const canEditShared = computed(() => {
   if (!shareEnabled.value) return false
   if (shareRequireLogin.value) return isAuthenticated.value
@@ -121,10 +127,23 @@ function toggleMenu() {
   menuOpen.value = !menuOpen.value
 }
 
+function toggleSettings() {
+  settingsOpen.value = !settingsOpen.value
+}
+
+function toggleOnline() {
+  onlineOpen.value = !onlineOpen.value
+}
+
 function handleDocumentClick(event) {
-  if (!menuRef.value) return
-  if (!menuRef.value.contains(event.target)) {
+  if (menuRef.value && !menuRef.value.contains(event.target)) {
     menuOpen.value = false
+  }
+  if (settingsRef.value && !settingsRef.value.contains(event.target)) {
+    settingsOpen.value = false
+  }
+  if (onlineRef.value && !onlineRef.value.contains(event.target)) {
+    onlineOpen.value = false
   }
 }
 
@@ -374,6 +393,16 @@ async function onCanvasOperation(payload) {
     // ignore history record errors
   }
 }
+
+function callCanvasAction(actionName) {
+  const canvas = mindmapRef.value
+  if (!canvas || typeof canvas[actionName] !== 'function') return
+  canvas[actionName]()
+}
+
+async function backHome() {
+  await router.push('/')
+}
 </script>
 
 <template>
@@ -388,7 +417,14 @@ async function onCanvasOperation(payload) {
         @operation="onCanvasOperation"
       />
 
-      <div class="share-floating-tools">
+      <div class="share-top-left-bar">
+        <button class="share-icon-btn" @click="backHome">←</button>
+        <button class="share-icon-btn" @click.stop="toggleSettings">☰</button>
+        <div class="share-doc-name">{{ mapTitle || shareCode }}</div>
+        <span class="share-mode-chip">{{ shareModeLabel }}</span>
+      </div>
+
+      <div v-if="settingsOpen" ref="settingsRef" class="share-settings-panel">
         <div class="share-title">{{ shareDisplayTitle }}</div>
         <div v-if="canManageShare" class="share-access-row">
           <span class="share-access-label">{{ t('share.accessTitle') }}</span>
@@ -407,32 +443,45 @@ async function onCanvasOperation(payload) {
           <button :disabled="accessSaving" @click="applyShareAccessMode">{{ t('share.applyAccess') }}</button>
         </div>
         <div class="actions">
-          <button class="primary" :disabled="saving || !canEditShared" @click="saveShared(true)">{{ t('share.saveShared') }}</button>
-          <a href="/">{{ t('share.backHome') }}</a>
+          <button class="primary" :disabled="saving || !canEditShared" @click="saveShared(true)">
+            {{ t('share.saveShared') }}
+          </button>
+          <button @click="backHome">{{ t('share.backHome') }}</button>
         </div>
       </div>
 
-      <div class="online-hover-box">
-        <div class="online-top-row">
-          <div class="online-hover-trigger">{{ t('share.onlineUsers') }} ({{ usersForList.length }})</div>
-          <div ref="menuRef" class="lang-switch dropdown share-lang-switch">
-            <button class="lang-trigger" @click.stop="toggleMenu">{{ t('app.langLabel') }}: {{ currentLocaleLabel }}</button>
-            <div v-if="menuOpen" class="lang-menu">
-              <button :class="{ active: currentLocale === 'zh' }" @click="switchLocale('zh')">{{ t('app.zh') }}</button>
-              <button :class="{ active: currentLocale === 'en' }" @click="switchLocale('en')">{{ t('app.en') }}</button>
-            </div>
+      <div class="share-top-right-bar">
+        <button class="share-icon-btn" @click="callCanvasAction('fitView')">⌖</button>
+        <div ref="onlineRef" class="share-online-wrap">
+          <button class="share-pill-btn" @click.stop="toggleOnline">{{ t('share.onlineUsers') }} ({{ usersForList.length }})</button>
+          <ul v-if="onlineOpen" class="share-online-menu">
+            <li v-for="user in usersForList" :key="user.connectionId">
+              <strong>
+                {{ user.displayName }}
+                <small v-if="user.connectionId === myConnectionId">({{ t('share.me') }})</small>
+              </strong>
+              <span v-if="user.connectionId !== myConnectionId">{{ Math.round(user.x || 0) }}, {{ Math.round(user.y || 0) }}</span>
+              <span v-else>--</span>
+            </li>
+          </ul>
+        </div>
+        <div ref="menuRef" class="share-lang-wrap">
+          <button class="share-pill-btn" @click.stop="toggleMenu">{{ t('app.langLabel') }}: {{ currentLocaleLabel }}</button>
+          <div v-if="menuOpen" class="lang-menu">
+            <button :class="{ active: currentLocale === 'zh' }" @click="switchLocale('zh')">{{ t('app.zh') }}</button>
+            <button :class="{ active: currentLocale === 'en' }" @click="switchLocale('en')">{{ t('app.en') }}</button>
           </div>
         </div>
-        <ul class="online-hover-menu">
-          <li v-for="user in usersForList" :key="user.connectionId">
-            <strong>
-              {{ user.displayName }}
-              <small v-if="user.connectionId === myConnectionId">({{ t('share.me') }})</small>
-            </strong>
-            <span v-if="user.connectionId !== myConnectionId">{{ Math.round(user.x || 0) }}, {{ Math.round(user.y || 0) }}</span>
-            <span v-else>--</span>
-          </li>
-        </ul>
+        <button class="primary share-save-btn" :disabled="saving || !canEditShared" @click="saveShared(true)">
+          {{ t('share.saveShared') }}
+        </button>
+      </div>
+
+      <div class="share-left-toolbox">
+        <button class="share-side-btn" :disabled="!canEditShared" @click="callCanvasAction('addFreeNode')">＋</button>
+        <button class="share-side-btn" :disabled="!canEditShared" @click="callCanvasAction('addChildNode')">子</button>
+        <button class="share-side-btn" :disabled="!canEditShared" @click="callCanvasAction('addSiblingNode')">同</button>
+        <button class="share-side-btn" @click="callCanvasAction('fitView')">适</button>
       </div>
 
       <div class="cursor-layer">

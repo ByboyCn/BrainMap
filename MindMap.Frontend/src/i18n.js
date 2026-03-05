@@ -66,6 +66,8 @@ const messages = {
     share: {
       title: '分享脑图',
       mapPrefix: '脑图',
+      modeEditable: '可编辑',
+      modeReadonly: '只读',
       signalr: 'SignalR 状态',
       accessTitle: '分享权限',
       accessPublicOperate: '任何人可查看并操作',
@@ -218,6 +220,8 @@ const messages = {
     share: {
       title: 'Shared MindMap',
       mapPrefix: 'MindMap',
+      modeEditable: 'Editable',
+      modeReadonly: 'Read-only',
       signalr: 'SignalR',
       accessTitle: 'Share Access',
       accessPublicOperate: 'Anyone can view and edit',

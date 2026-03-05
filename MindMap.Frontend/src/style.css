@@ -533,30 +533,71 @@ button:disabled {
   height: 100%;
 }
 
-.share-floating-tools {
+.share-top-left-bar {
   position: absolute;
   left: 10px;
   top: 10px;
-  z-index: 8;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid #d4dde9;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 6px 18px rgba(30, 44, 72, 0.12);
+}
+
+.share-icon-btn {
+  width: auto;
+  min-width: 30px;
+  height: 30px;
+  padding: 0 8px;
+  border-radius: 8px;
+  border: 1px solid #d6dfed;
+  background: #fff;
+  color: #1f3557;
+  font-size: 15px;
+  line-height: 1;
+}
+
+.share-doc-name {
+  max-width: 260px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 700;
+  color: #1f3557;
+}
+
+.share-mode-chip {
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  color: #5a6f93;
+  background: #eff4fc;
+}
+
+.share-settings-panel {
+  position: absolute;
+  left: 10px;
+  top: 54px;
+  z-index: 10;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  max-width: 380px;
-  padding: 8px;
-  border: 1px solid #d3e1fb;
+  gap: 6px;
+  width: min(620px, calc(100vw - 20px));
+  padding: 10px;
+  border: 1px solid #d4dde9;
   border-radius: 12px;
-  background: #ffffffeb;
-  box-shadow: 0 8px 24px rgba(20, 54, 106, 0.16);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 8px 20px rgba(30, 44, 72, 0.14);
 }
 
 .share-title {
+  font-size: 14px;
   font-weight: 700;
   color: #223a5f;
-}
-
-.share-meta {
-  font-size: 12px;
-  color: #4f6487;
 }
 
 .share-access-row {
@@ -564,7 +605,6 @@ button:disabled {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  margin-top: 2px;
 }
 
 .share-access-label {
@@ -591,7 +631,7 @@ button:disabled {
 
 .share-access-select {
   width: auto;
-  min-width: 230px;
+  min-width: 220px;
   border-radius: 8px;
   background: #edf4ff;
   color: #27456f;
@@ -603,118 +643,57 @@ button:disabled {
   border-radius: 8px;
 }
 
-.share-floating-tools .actions {
+.share-settings-panel .actions {
   margin-top: 2px;
 }
 
-.share-history {
-  margin-top: 4px;
-  border-top: 1px solid #dce7fb;
-  padding-top: 6px;
-}
-
-.share-history-title {
-  font-size: 12px;
-  font-weight: 700;
-  color: #2b4467;
-  margin-bottom: 4px;
-}
-
-.share-history-loading,
-.share-history-empty {
-  font-size: 12px;
-  color: #5f7598;
-}
-
-.share-history-list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  max-height: 160px;
-  overflow-y: auto;
-}
-
-.share-history-list li {
-  display: grid;
-  grid-template-columns: 62px minmax(0, 1fr) auto;
-  gap: 8px;
-  align-items: center;
-  font-size: 12px;
-  color: #40577a;
-  padding: 3px 0;
-  border-top: 1px dashed #e5edfb;
-}
-
-.share-history-list li:first-child {
-  border-top: 0;
-}
-
-.share-history-list .time {
-  color: #6d84a8;
-}
-
-.share-history-list .user {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.share-history-list .action {
-  color: #2d4f87;
-}
-
-.online-hover-box {
+.share-top-right-bar {
   position: absolute;
   right: 10px;
   top: 10px;
-  z-index: 8;
-}
-
-.online-top-row {
+  z-index: 10;
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-.online-hover-trigger {
-  border: 1px solid #ccdaf8;
-  border-radius: 10px;
-  background: #ffffffeb;
-  color: #2d4568;
-  font-size: 13px;
   padding: 8px 10px;
-  min-width: 180px;
-  box-shadow: 0 8px 24px rgba(20, 54, 106, 0.14);
+  border: 1px solid #d4dde9;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 6px 18px rgba(30, 44, 72, 0.12);
 }
 
-.share-lang-switch {
-  padding: 4px 6px;
-}
-
-.share-lang-switch .lang-trigger {
+.share-pill-btn {
+  width: auto;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid #d4deed;
+  background: #fff;
+  color: #233b5e;
   font-size: 12px;
-  padding: 6px 8px;
 }
 
-.online-hover-menu {
-  margin: 8px 0 0;
+.share-online-wrap,
+.share-lang-wrap {
+  position: relative;
+}
+
+.share-online-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  margin: 0;
   padding: 0;
   list-style: none;
-  border: 1px solid #d9e4fb;
-  border-radius: 10px;
+  min-width: 240px;
   max-height: 280px;
   overflow: auto;
+  border: 1px solid #d9e4fb;
+  border-radius: 10px;
   background: #ffffffef;
-  min-width: 240px;
-  display: none;
   box-shadow: 0 10px 24px rgba(20, 54, 106, 0.14);
 }
 
-.online-hover-box:hover .online-hover-menu {
-  display: block;
-}
-
-.online-hover-menu li {
+.share-online-menu li {
   display: flex;
   justify-content: space-between;
   gap: 10px;
@@ -723,21 +702,51 @@ button:disabled {
   font-size: 12px;
 }
 
-.online-hover-menu li:first-child {
+.share-online-menu li:first-child {
   border-top: 0;
 }
 
-.online-hover-menu strong {
+.share-online-menu strong {
   color: #2b3f60;
 }
 
-.online-hover-menu small {
+.share-online-menu small,
+.share-online-menu span {
   color: #5f7598;
-  font-weight: 500;
 }
 
-.online-hover-menu span {
-  color: #5f7598;
+.share-save-btn {
+  width: auto;
+  padding: 7px 12px;
+  border-radius: 10px;
+}
+
+.share-left-toolbox {
+  position: absolute;
+  left: 10px;
+  top: 150px;
+  z-index: 9;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid #d4dde9;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 6px 18px rgba(30, 44, 72, 0.12);
+}
+
+.share-side-btn {
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 8px;
+  border: 1px solid #d4deed;
+  background: #fff;
+  color: #2a436b;
+  font-size: 14px;
+  line-height: 1;
 }
 
 .share-float-msg {
@@ -1241,20 +1250,31 @@ button:disabled {
     padding: 0;
   }
 
-  .share-floating-tools {
-    right: 8px;
+  .share-top-left-bar {
     left: 8px;
+    right: 8px;
     max-width: none;
   }
 
-  .online-hover-box {
+  .share-settings-panel {
+    left: 8px;
     right: 8px;
-    top: auto;
-    bottom: 46px;
+    width: auto;
+    top: 56px;
   }
 
-  .online-top-row {
+  .share-top-right-bar {
+    right: 8px;
+    left: 8px;
+    top: auto;
+    bottom: 8px;
     justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+
+  .share-left-toolbox {
+    top: 130px;
+    left: 8px;
   }
 
   .todo-page {
