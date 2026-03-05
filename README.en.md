@@ -18,7 +18,8 @@ Tech stack:
 4. TODO 4 groups: pending / completed / archived pending / archived completed
 5. TODO sorting: natural, created time, planned start, planned end, start time, completed time
 6. Bottom quick input for TODO (`Ctrl + /` to focus, `Enter` to submit)
-7. Frontend/backend business APIs use Protobuf (`/pb/*`)
+7. Subtask-parent status sync: when all subtasks are done, parent task is auto-completed; if any subtask becomes pending, parent completion is reverted automatically
+8. Frontend/backend business APIs use Protobuf (`/pb/*`)
 
 ## Local Development
 ### Start backend
