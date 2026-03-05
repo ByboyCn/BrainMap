@@ -6,7 +6,7 @@ import { useI18n } from 'vue-i18n'
 import MindMapCanvas from '../components/MindMapCanvas.vue'
 import { setLocale } from '../i18n'
 import { getApiBaseUrl, getSession } from '../services/api'
-import { pbAddShareHistory, pbCreateShare, pbGetShareHistory, pbGetShared, pbUpdateShared } from '../services/pb'
+import { pbAddShareHistory, pbCreateShare, pbGetShared, pbUpdateShared } from '../services/pb'
 
 const route = useRoute()
 const { t, locale } = useI18n()
@@ -32,8 +32,6 @@ const menuRef = ref(null)
 const hadConnectedOnce = ref(false)
 const showWsMask = ref(false)
 const defaultDocumentTitle = document.title
-const shareHistory = ref([])
-const historyLoading = ref(false)
 const session = ref(getSession())
 const mapId = ref('')
 const shareEnabled = ref(true)
@@ -45,13 +43,10 @@ let connection = null
 let lastSentAt = 0
 let saveTimer = null
 let broadcastTimer = null
-let historyTimer = null
 
 const AUTO_SAVE_DELAY_MS = 700
 const BROADCAST_DELAY_MS = 120
 const message = computed(() => (messageKey.value ? t(messageKey.value) : ''))
-const connectStateLabel = computed(() => t(`share.state.${connectState.value}`))
-const autoSaveStatus = computed(() => (saving.value ? t('editor.saving') : t('editor.enabled')))
 const myConnectionId = computed(() => connection?.connectionId || '')
 const usersForList = computed(() => onlineUsers.value.filter((user) => !!user.connectionId))
 const usersForCursor = computed(() =>
@@ -93,10 +88,6 @@ onBeforeUnmount(async () => {
   if (broadcastTimer) {
     clearTimeout(broadcastTimer)
     broadcastTimer = null
-  }
-  if (historyTimer) {
-    clearTimeout(historyTimer)
-    historyTimer = null
   }
   document.title = defaultDocumentTitle
   await disconnectHub()
@@ -169,7 +160,6 @@ async function loadMap() {
     contentJson.value = payload.contentJson || '{"nodes":[],"edges":[]}'
     lastSavedContent.value = contentJson.value
     isLoaded.value = true
-    await loadShareHistory()
   } catch (err) {
     error.value = err.message
   } finally {
@@ -248,7 +238,6 @@ async function connectHub() {
       suppressWatch.value = false
       remoteApplying.value = false
     }, 0)
-    scheduleHistoryReload()
   })
 
   connection.onreconnected(async () => {
@@ -371,28 +360,6 @@ async function saveShared(force = true) {
   }
 }
 
-function scheduleHistoryReload(delayMs = 350) {
-  if (historyTimer) {
-    clearTimeout(historyTimer)
-  }
-  historyTimer = setTimeout(() => {
-    historyTimer = null
-    void loadShareHistory()
-  }, delayMs)
-}
-
-async function loadShareHistory() {
-  if (!shareCode) return
-  historyLoading.value = true
-  try {
-    shareHistory.value = await pbGetShareHistory(String(shareCode), 40)
-  } catch {
-    // ignore history fetch errors to avoid breaking collaboration flow
-  } finally {
-    historyLoading.value = false
-  }
-}
-
 async function onCanvasOperation(payload) {
   if (!canEditShared.value) return
   if (!payload?.actionType) return
@@ -403,31 +370,9 @@ async function onCanvasOperation(payload) {
       JSON.stringify(payload.detail || {}),
       String(displayName.value || '')
     )
-    scheduleHistoryReload(120)
   } catch {
     // ignore history record errors
   }
-}
-
-function getHistoryActionLabel(actionType) {
-  switch (String(actionType || '').toLowerCase()) {
-    case 'open':
-      return t('share.historyAction.open')
-    case 'node_add':
-      return t('share.historyAction.nodeAdd')
-    case 'node_delete':
-      return t('share.historyAction.nodeDelete')
-    case 'node_reparent':
-      return t('share.historyAction.nodeReparent')
-    default:
-      return t('share.historyAction.unknown')
-  }
-}
-
-function formatHistoryTime(unixMs) {
-  const value = Number(unixMs || 0)
-  if (!value) return '--'
-  return new Date(value).toLocaleTimeString()
 }
 </script>
 
@@ -445,7 +390,6 @@ function formatHistoryTime(unixMs) {
 
       <div class="share-floating-tools">
         <div class="share-title">{{ shareDisplayTitle }}</div>
-        <div class="share-meta">{{ t('share.signalr') }}: {{ connectStateLabel }} | {{ t('share.autoSave') }}: {{ autoSaveStatus }}</div>
         <div v-if="canManageShare" class="share-access-row">
           <span class="share-access-label">{{ t('share.accessTitle') }}</span>
           <label class="share-access-check">
@@ -465,18 +409,6 @@ function formatHistoryTime(unixMs) {
         <div class="actions">
           <button class="primary" :disabled="saving || !canEditShared" @click="saveShared(true)">{{ t('share.saveShared') }}</button>
           <a href="/">{{ t('share.backHome') }}</a>
-        </div>
-        <div class="share-history">
-          <div class="share-history-title">{{ t('share.historyTitle') }}</div>
-          <div v-if="historyLoading" class="share-history-loading">{{ t('share.historyLoading') }}</div>
-          <ul v-else-if="shareHistory.length" class="share-history-list">
-            <li v-for="item in shareHistory" :key="item.id">
-              <span class="time">{{ formatHistoryTime(item.createdAtUnixMs) }}</span>
-              <span class="user">{{ item.actorDisplayName || t('share.guestPrefix') }}</span>
-              <span class="action">{{ getHistoryActionLabel(item.actionType) }}</span>
-            </li>
-          </ul>
-          <div v-else class="share-history-empty">{{ t('share.historyEmpty') }}</div>
         </div>
       </div>
 
