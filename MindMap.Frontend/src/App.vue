@@ -9,7 +9,10 @@ const route = useRoute()
 
 const currentLocale = computed(() => locale.value)
 const currentLocaleLabel = computed(() => (currentLocale.value === 'zh' ? t('app.zh') : t('app.en')))
-const showTopbar = computed(() => !String(route.path || '').startsWith('/share/'))
+const showTopbar = computed(() => {
+  const path = String(route.path || '')
+  return !path.startsWith('/share/') && !path.startsWith('/todo/')
+})
 const menuOpen = ref(false)
 const menuRef = ref(null)
 
