@@ -1,4 +1,4 @@
-﻿# 脑图与 TODO 协作 Demo
+﻿# 脑图与 TODO 协作
 
 English version: [README.en.md](./README.en.md)
 
@@ -86,3 +86,4 @@ docker exec <caddy容器名> caddy reload --config /etc/caddy/Caddyfile
 ## 备注
 - 分享页在线光标使用 SignalR 实时同步（`/hubs/share`）。
 - 脑图和 TODO 都走 Protobuf 接口进行读写。
+

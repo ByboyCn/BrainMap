@@ -1,4 +1,4 @@
-﻿# MindMap + TODO Collaboration Demo
+﻿# MindMap + TODO Collaboration
 
 中文版: [README.md](./README.md)
 
@@ -86,3 +86,4 @@ docker exec <caddy_container_name> caddy reload --config /etc/caddy/Caddyfile
 ## Notes
 - Share-page cursor sync uses SignalR (`/hubs/share`).
 - Both MindMap and TODO CRUD use protobuf endpoints.
+
