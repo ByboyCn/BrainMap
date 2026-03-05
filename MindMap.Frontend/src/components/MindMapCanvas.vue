@@ -85,8 +85,14 @@ class MindMapNodeModel extends RectNodeModel {
     this.width = width
     this.height = height
     this.radius = isEmpty ? Math.floor(height / 2) : 8
+    const savedAnchorOffsetX = Number(this.properties?.anchorOffsetX || 0)
+    const anchorOffsetX = savedAnchorOffsetX > 0 ? savedAnchorOffsetX : Math.max(1, Math.round(width / 2))
     const fillColor = this.properties?.fillColor || DEFAULT_NODE_FILL
     const strokeColor = this.properties?.strokeColor || DEFAULT_NODE_STROKE
+    this.properties = {
+      ...(this.properties || {}),
+      anchorOffsetX,
+    }
     this.style = {
       ...this.style,
       fill: fillColor,
@@ -94,8 +100,8 @@ class MindMapNodeModel extends RectNodeModel {
       radius: this.radius,
     }
     this.anchorsOffset = [
-      { x: this.width / 2, y: 0, id: `${this.id}${OUT_ANCHOR_SUFFIX}` },
-      { x: -this.width / 2, y: 0, id: `${this.id}${IN_ANCHOR_SUFFIX}` },
+      { x: anchorOffsetX, y: 0, id: `${this.id}${OUT_ANCHOR_SUFFIX}` },
+      { x: -anchorOffsetX, y: 0, id: `${this.id}${IN_ANCHOR_SUFFIX}` },
     ]
   }
 
@@ -662,7 +668,7 @@ function addChildNode() {
     lf.setProperties(parentNode.id, { collapsed: false })
   }
   const x = getChildCenterXByParent(parentNode.id)
-  const y = parentNode.y
+  const y = getAppendChildY(parentNode.id, parentNode.y)
   addNodeWithParent(parentNode, x, y)
 }
 
@@ -687,7 +693,7 @@ function addSiblingNode() {
   if (!parentNode?.id) return
 
   const x = getChildCenterXByParent(parentNode.id)
-  const y = parentNode.y
+  const y = getAppendChildY(parentNode.id, parentNode.y)
   addNodeWithParent(parentNode, x, y)
 }
 
@@ -729,18 +735,36 @@ function getDirectChildrenIds(nodeId) {
   return edges.filter((edge) => edge.sourceNodeId === nodeId).map((edge) => edge.targetNodeId)
 }
 
+function getAppendChildY(parentId, fallbackY = 0) {
+  if (!lf || !parentId) return fallbackY
+  const childYs = getDirectChildrenIds(parentId)
+    .map((id) => lf.getDataById(id))
+    .filter((node) => node?.id)
+    .map((node) => Number(node.y || 0))
+  if (childYs.length === 0) return fallbackY
+  return Math.max(...childYs) + 1
+}
+
 function getNodeWidthById(nodeId) {
   if (!lf || !nodeId) return MIN_NODE_WIDTH
   return Number(lf.getNodeModelById(nodeId)?.width || MIN_NODE_WIDTH)
+}
+
+function getNodeAnchorOffsetById(nodeId) {
+  if (!lf || !nodeId) return Math.round(MIN_NODE_WIDTH / 2)
+  const model = lf.getNodeModelById(nodeId)
+  const offsetFromProps = Number(model?.properties?.anchorOffsetX || 0)
+  if (offsetFromProps > 0) return offsetFromProps
+  return Math.max(1, Math.round(Number(model?.width || MIN_NODE_WIDTH) / 2))
 }
 
 function getChildCenterXByParent(parentId, childId = '') {
   if (!lf || !parentId) return 0
   const parentNode = lf.getDataById(parentId)
   if (!parentNode?.id) return 0
-  const parentWidth = getNodeWidthById(parentId)
-  const childWidth = childId ? getNodeWidthById(childId) : MIN_NODE_WIDTH
-  return Number(parentNode.x || 0) + parentWidth / 2 + CHILD_HORIZONTAL_GAP + childWidth / 2
+  const parentOutOffset = getNodeAnchorOffsetById(parentId)
+  const childInOffset = childId ? getNodeAnchorOffsetById(childId) : Math.round(MIN_NODE_WIDTH / 2)
+  return Number(parentNode.x || 0) + parentOutOffset + CHILD_HORIZONTAL_GAP + childInOffset
 }
 
 function getEdgeBetween(sourceNodeId, targetNodeId) {
@@ -1641,6 +1665,7 @@ watch(
     </div>
   </div>
 </template>
+
 
 
 

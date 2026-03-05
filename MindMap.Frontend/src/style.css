@@ -241,6 +241,17 @@ button.primary:hover {
   background: #1e63eb;
 }
 
+button.danger {
+  background: #f83f57;
+  color: #fff;
+  border-color: #f83f57;
+}
+
+button.danger:hover {
+  background: #e72f4a;
+  border-color: #e72f4a;
+}
+
 button:disabled {
   opacity: 0.6;
   cursor: not-allowed;

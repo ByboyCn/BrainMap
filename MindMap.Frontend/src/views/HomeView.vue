@@ -3,7 +3,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { clearSession, getSession, saveSession } from '../services/api'
-import { pbCreateMap, pbListMaps, pbLogin, pbRegister } from '../services/pb'
+import { pbCreateMap, pbDeleteMap, pbListMaps, pbLogin, pbRegister } from '../services/pb'
 
 const router = useRouter()
 const { t } = useI18n()
@@ -94,18 +94,37 @@ async function createMap() {
 async function openEditor(id) {
   await router.push(`/editor/${id}`)
 }
+
+async function deleteMap(id) {
+  if (!id) return
+  const ok = window.confirm('确认删除这张脑图吗？')
+  if (!ok) return
+
+  resetStatus()
+  busy.value = true
+  try {
+    await pbDeleteMap(id)
+    messageKey.value = ''
+    await loadMaps()
+    window.alert('删除成功')
+  } catch (err) {
+    error.value = err.message
+  } finally {
+    busy.value = false
+  }
+}
 </script>
 
 <template>
   <main class="page">
     <section class="panel">
-      <h1>{{ t('home.title') }}</h1>
+      <h1>脑图工作台</h1>
       <p class="sub">{{ t('home.subtitle') }}</p>
 
       <div v-if="!isAuthenticated" class="auth">
         <div class="tabs">
-          <button :class="{ active: authMode === 'login' }" @click="authMode = 'login'">{{ t('home.login') }}</button>
-          <button :class="{ active: authMode === 'register' }" @click="authMode = 'register'">{{ t('home.register') }}</button>
+          <button :class="{ active: authMode === 'login' }" @click="authMode = 'login'">脑图登录</button>
+          <button :class="{ active: authMode === 'register' }" @click="authMode = 'register'">脑图注册</button>
         </div>
         <label>
           {{ t('home.username') }}
@@ -116,7 +135,7 @@ async function openEditor(id) {
           <input v-model="authForm.password" type="password" :placeholder="t('home.inputPassword')" />
         </label>
         <button class="primary" :disabled="busy" @click="submitAuth">
-          {{ authMode === 'register' ? t('home.register') : t('home.login') }}
+          {{ authMode === 'register' ? '脑图注册' : '脑图登录' }}
         </button>
       </div>
 
@@ -143,7 +162,10 @@ async function openEditor(id) {
                 <strong>{{ item.title }}</strong>
                 <div class="hint">{{ new Date(item.updatedAtUnixMs).toLocaleString() }}</div>
               </div>
-              <button class="primary" @click="openEditor(item.id)">{{ t('home.openEditor') }}</button>
+              <div class="actions">
+                <button class="primary" @click="openEditor(item.id)">{{ t('home.openEditor') }}</button>
+                <button class="danger" :disabled="busy" @click="deleteMap(item.id)">删除</button>
+              </div>
             </div>
           </div>
         </section>

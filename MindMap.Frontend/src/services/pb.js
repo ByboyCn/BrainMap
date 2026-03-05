@@ -160,6 +160,11 @@ export async function pbUpdateMap(mapId, title, contentJson) {
   return assertSuccess(result)
 }
 
+export async function pbDeleteMap(mapId) {
+  const result = await pbRequest('/pb/mindmaps/delete', 'PbMindMapIdRequest', 'PbStatusResponse', { mapId }, true)
+  return assertSuccess(result)
+}
+
 export async function pbCreateShare(mapId) {
   const result = await pbRequest('/pb/mindmaps/share', 'PbMindMapIdRequest', 'PbShareResponse', { mapId }, true)
   return assertSuccess(result)

@@ -21,6 +21,7 @@ public static class PbEndpoints
         maps.MapPost("/create", CreateMapAsync);
         maps.MapPost("/get", GetMapAsync);
         maps.MapPost("/update", UpdateMapAsync);
+        maps.MapPost("/delete", DeleteMapAsync);
         maps.MapPost("/share", CreateShareAsync);
 
         var share = group.MapGroup("/share");
@@ -175,6 +176,27 @@ public static class PbEndpoints
         await db.SaveChangesAsync();
 
         return PbIo.Write(ToDetail(map));
+    }
+
+    private static async Task<IResult> DeleteMapAsync(ClaimsPrincipal principal, HttpRequest request, AppDbContext db)
+    {
+        var body = await PbIo.ReadAsync<PbMindMapIdRequest>(request);
+        if (!Guid.TryParse(body.MapId, out var mapId))
+        {
+            return PbIo.Write(new PbStatusResponse { Success = false, Message = "invalid map id" });
+        }
+
+        var userId = principal.GetUserId();
+        var map = await db.MindMaps.SingleOrDefaultAsync(x => x.Id == mapId && x.OwnerId == userId);
+        if (map is null)
+        {
+            return PbIo.Write(new PbStatusResponse { Success = false, Message = "mindmap not found" });
+        }
+
+        db.MindMaps.Remove(map);
+        await db.SaveChangesAsync();
+
+        return PbIo.Write(new PbStatusResponse { Success = true, Message = "deleted" });
     }
 
     private static async Task<IResult> CreateShareAsync(ClaimsPrincipal principal, HttpRequest request, AppDbContext db)

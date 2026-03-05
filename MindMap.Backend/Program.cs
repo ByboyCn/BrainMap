@@ -184,6 +184,21 @@ maps.MapPut("/{id:guid}", async (ClaimsPrincipal principal, Guid id, UpdateMindM
     return Results.Ok(new MindMapDetailResponse(map.Id, map.Title, map.ContentJson, map.UpdatedAtUtc, map.ShareCode));
 });
 
+maps.MapDelete("/{id:guid}", async (ClaimsPrincipal principal, Guid id, AppDbContext db) =>
+{
+    var userId = principal.GetUserId();
+    var map = await db.MindMaps.SingleOrDefaultAsync(m => m.Id == id && m.OwnerId == userId);
+    if (map is null)
+    {
+        return Results.NotFound(new { message = "mindmap not found" });
+    }
+
+    db.MindMaps.Remove(map);
+    await db.SaveChangesAsync();
+
+    return Results.Ok(new { message = "deleted" });
+});
+
 maps.MapPost("/{id:guid}/share", async (ClaimsPrincipal principal, Guid id, AppDbContext db) =>
 {
     var userId = principal.GetUserId();
