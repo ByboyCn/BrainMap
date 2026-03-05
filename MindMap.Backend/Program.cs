@@ -293,7 +293,7 @@ static void EnsureSqliteSchema(AppDbContext db)
             ActionType TEXT NOT NULL,
             ActorId TEXT NOT NULL DEFAULT '',
             ActorDisplayName TEXT NOT NULL DEFAULT '',
-            DetailJson TEXT NOT NULL DEFAULT '{}',
+            DetailJson TEXT NOT NULL DEFAULT '{{}}',
             ClientIp TEXT NOT NULL DEFAULT '',
             CreatedAtUtc TEXT NOT NULL,
             CONSTRAINT FK_MindMapShareHistories_MindMaps_MindMapId FOREIGN KEY (MindMapId) REFERENCES MindMaps (Id) ON DELETE CASCADE
