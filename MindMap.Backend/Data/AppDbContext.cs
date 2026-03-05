@@ -24,7 +24,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             entity.HasKey(x => x.Id);
             entity.Property(x => x.Title).HasMaxLength(120);
             entity.Property(x => x.ShareCode).HasMaxLength(24);
+            entity.Property(x => x.ShareEnabled).HasDefaultValue(false);
             entity.Property(x => x.ShareRequireLogin).HasDefaultValue(false);
+            entity.Property(x => x.ShareAllowGuestEdit).HasDefaultValue(true);
             entity.HasIndex(x => x.ShareCode).IsUnique();
             entity.HasOne(x => x.Owner)
                 .WithMany(u => u.MindMaps)

@@ -38,6 +38,15 @@ message PbUpdateMindMapRequest {
 message PbCreateShareRequest {
   string mapId = 1;
   bool requireLogin = 2;
+  bool enabled = 3;
+  bool guestCanEdit = 4;
+}
+
+message PbCreateTodoShareRequest {
+  string todoId = 1;
+  bool requireLogin = 2;
+  bool enabled = 3;
+  bool guestCanEdit = 4;
 }
 
 message PbShareCodeRequest {
@@ -81,6 +90,9 @@ message PbMindMapSummary {
   string title = 2;
   int64 updatedAtUnixMs = 3;
   string shareCode = 4;
+  bool shareEnabled = 5;
+  bool shareRequireLogin = 6;
+  bool shareAllowGuestEdit = 7;
 }
 
 message PbMindMapListResponse {
@@ -98,6 +110,8 @@ message PbMindMapDetailResponse {
   int64 updatedAtUnixMs = 6;
   string shareCode = 7;
   bool shareRequireLogin = 8;
+  bool shareEnabled = 9;
+  bool shareAllowGuestEdit = 10;
 }
 
 message PbShareResponse {
@@ -106,6 +120,8 @@ message PbShareResponse {
   string shareCode = 3;
   string relativeUrl = 4;
   bool requireLogin = 5;
+  bool enabled = 6;
+  bool guestCanEdit = 7;
 }
 
 message PbStatusResponse {
@@ -132,6 +148,10 @@ message PbTodoSummary {
   string id = 1;
   string title = 2;
   int64 updatedAtUnixMs = 3;
+  string shareCode = 4;
+  bool shareEnabled = 5;
+  bool shareRequireLogin = 6;
+  bool shareAllowGuestEdit = 7;
 }
 
 message PbTodoListResponse {
@@ -147,6 +167,10 @@ message PbTodoDetailResponse {
   string title = 4;
   string contentJson = 5;
   int64 updatedAtUnixMs = 6;
+  string shareCode = 7;
+  bool shareEnabled = 8;
+  bool shareRequireLogin = 9;
+  bool shareAllowGuestEdit = 10;
 }
 `
 
@@ -235,8 +259,25 @@ export async function pbDeleteMap(mapId) {
   return assertSuccess(result)
 }
 
-export async function pbCreateShare(mapId, requireLogin = false) {
-  const result = await pbRequest('/pb/mindmaps/share', 'PbCreateShareRequest', 'PbShareResponse', { mapId, requireLogin }, true)
+export async function pbCreateShare(mapId, requireLogin = false, enabled = true, guestCanEdit = true) {
+  const result = await pbRequest(
+    '/pb/mindmaps/share',
+    'PbCreateShareRequest',
+    'PbShareResponse',
+    { mapId, requireLogin, enabled, guestCanEdit },
+    true
+  )
+  return assertSuccess(result)
+}
+
+export async function pbCreateTodoShare(todoId, requireLogin = false, enabled = true, guestCanEdit = true) {
+  const result = await pbRequest(
+    '/pb/todos/share',
+    'PbCreateTodoShareRequest',
+    'PbShareResponse',
+    { todoId, requireLogin, enabled, guestCanEdit },
+    true
+  )
   return assertSuccess(result)
 }
 

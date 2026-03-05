@@ -16,7 +16,9 @@ public class MindMapDocument
 
     [MaxLength(24)]
     public string? ShareCode { get; set; }
+    public bool ShareEnabled { get; set; }
     public bool ShareRequireLogin { get; set; }
+    public bool ShareAllowGuestEdit { get; set; } = true;
 
     public List<MindMapShareHistory> ShareHistories { get; set; } = [];
 

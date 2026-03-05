@@ -56,6 +56,17 @@ public class PbCreateShareRequest
 {
     [ProtoMember(1)] public string MapId { get; set; } = string.Empty;
     [ProtoMember(2)] public bool RequireLogin { get; set; }
+    [ProtoMember(3)] public bool Enabled { get; set; } = true;
+    [ProtoMember(4)] public bool GuestCanEdit { get; set; } = true;
+}
+
+[ProtoContract]
+public class PbCreateTodoShareRequest
+{
+    [ProtoMember(1)] public string TodoId { get; set; } = string.Empty;
+    [ProtoMember(2)] public bool RequireLogin { get; set; }
+    [ProtoMember(3)] public bool Enabled { get; set; } = true;
+    [ProtoMember(4)] public bool GuestCanEdit { get; set; } = true;
 }
 
 [ProtoContract]
@@ -109,6 +120,9 @@ public class PbMindMapSummary
     [ProtoMember(2)] public string Title { get; set; } = string.Empty;
     [ProtoMember(3)] public long UpdatedAtUnixMs { get; set; }
     [ProtoMember(4)] public string ShareCode { get; set; } = string.Empty;
+    [ProtoMember(5)] public bool ShareEnabled { get; set; }
+    [ProtoMember(6)] public bool ShareRequireLogin { get; set; }
+    [ProtoMember(7)] public bool ShareAllowGuestEdit { get; set; } = true;
 }
 
 [ProtoContract]
@@ -130,6 +144,8 @@ public class PbMindMapDetailResponse
     [ProtoMember(6)] public long UpdatedAtUnixMs { get; set; }
     [ProtoMember(7)] public string ShareCode { get; set; } = string.Empty;
     [ProtoMember(8)] public bool ShareRequireLogin { get; set; }
+    [ProtoMember(9)] public bool ShareEnabled { get; set; }
+    [ProtoMember(10)] public bool ShareAllowGuestEdit { get; set; } = true;
 }
 
 [ProtoContract]
@@ -140,6 +156,8 @@ public class PbShareResponse
     [ProtoMember(3)] public string ShareCode { get; set; } = string.Empty;
     [ProtoMember(4)] public string RelativeUrl { get; set; } = string.Empty;
     [ProtoMember(5)] public bool RequireLogin { get; set; }
+    [ProtoMember(6)] public bool Enabled { get; set; }
+    [ProtoMember(7)] public bool GuestCanEdit { get; set; } = true;
 }
 
 [ProtoContract]
@@ -174,6 +192,10 @@ public class PbTodoSummary
     [ProtoMember(1)] public string Id { get; set; } = string.Empty;
     [ProtoMember(2)] public string Title { get; set; } = string.Empty;
     [ProtoMember(3)] public long UpdatedAtUnixMs { get; set; }
+    [ProtoMember(4)] public string ShareCode { get; set; } = string.Empty;
+    [ProtoMember(5)] public bool ShareEnabled { get; set; }
+    [ProtoMember(6)] public bool ShareRequireLogin { get; set; }
+    [ProtoMember(7)] public bool ShareAllowGuestEdit { get; set; } = true;
 }
 
 [ProtoContract]
@@ -193,4 +215,8 @@ public class PbTodoDetailResponse
     [ProtoMember(4)] public string Title { get; set; } = string.Empty;
     [ProtoMember(5)] public string ContentJson { get; set; } = string.Empty;
     [ProtoMember(6)] public long UpdatedAtUnixMs { get; set; }
+    [ProtoMember(7)] public string ShareCode { get; set; } = string.Empty;
+    [ProtoMember(8)] public bool ShareEnabled { get; set; }
+    [ProtoMember(9)] public bool ShareRequireLogin { get; set; }
+    [ProtoMember(10)] public bool ShareAllowGuestEdit { get; set; } = true;
 }

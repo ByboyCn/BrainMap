@@ -19,6 +19,11 @@ public class ShareHub(AppDbContext db, PresenceService presenceService) : Hub
             throw new HubException("share room not found");
         }
 
+        if (!map.ShareEnabled)
+        {
+            throw new HubException("share is disabled");
+        }
+
         var isAuthenticated = Context.User?.Identity?.IsAuthenticated == true;
         if (map.ShareRequireLogin && !isAuthenticated)
         {
@@ -54,6 +59,22 @@ public class ShareHub(AppDbContext db, PresenceService presenceService) : Hub
     public async Task UpdateSharedContent(string shareCode, string contentJson)
     {
         if (string.IsNullOrWhiteSpace(shareCode) || string.IsNullOrWhiteSpace(contentJson))
+        {
+            return;
+        }
+
+        var map = await _db.MindMaps.SingleOrDefaultAsync(m => m.ShareCode == shareCode);
+        if (map is null || !map.ShareEnabled)
+        {
+            return;
+        }
+
+        var isAuthenticated = Context.User?.Identity?.IsAuthenticated == true;
+        if (map.ShareRequireLogin && !isAuthenticated)
+        {
+            return;
+        }
+        if (!isAuthenticated && !map.ShareAllowGuestEdit)
         {
             return;
         }

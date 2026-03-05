@@ -5,7 +5,9 @@ import { useI18n } from 'vue-i18n'
 import { clearSession, getSession, saveSession } from '../services/api'
 import {
   pbCreateMap,
+  pbCreateShare,
   pbCreateTodo,
+  pbCreateTodoShare,
   pbDeleteMap,
   pbDeleteTodo,
   pbListMaps,
@@ -26,6 +28,7 @@ const createTitle = ref('')
 const maps = ref([])
 const todos = ref([])
 const busy = ref(false)
+const shareSavingId = ref('')
 const messageKey = ref('')
 const error = ref('')
 const session = ref(getSession())
@@ -160,6 +163,37 @@ async function deleteTodo(id) {
     busy.value = false
   }
 }
+
+async function applyShareSettings(item, docType) {
+  if (!item?.id) return
+  resetStatus()
+  shareSavingId.value = `${docType}:${item.id}`
+  try {
+    const enabled = !!item.shareEnabled
+    const requireLogin = !!item.shareRequireLogin
+    const guestCanEdit = requireLogin ? false : !!item.shareAllowGuestEdit
+
+    const result =
+      docType === 'todo'
+        ? await pbCreateTodoShare(item.id, requireLogin, enabled, guestCanEdit)
+        : await pbCreateShare(item.id, requireLogin, enabled, guestCanEdit)
+
+    item.shareCode = result.shareCode || item.shareCode || ''
+    item.shareEnabled = !!result.enabled
+    item.shareRequireLogin = !!result.requireLogin
+    item.shareAllowGuestEdit = !!result.guestCanEdit
+  } catch (err) {
+    error.value = err.message
+  } finally {
+    shareSavingId.value = ''
+  }
+}
+
+function getShareUrl(shareCode) {
+  const code = String(shareCode || '').trim()
+  if (!code) return ''
+  return `${window.location.origin}/share/${code}`
+}
 </script>
 
 <template>
@@ -212,6 +246,40 @@ async function deleteTodo(id) {
               <div>
                 <strong>{{ item.title }}</strong>
                 <div class="hint">{{ new Date(item.updatedAtUnixMs).toLocaleString() }}</div>
+                <div class="home-share-settings">
+                  <div class="home-share-title">{{ t('home.shareSettings') }}</div>
+                  <label class="home-share-check">
+                    <input v-model="item.shareEnabled" type="checkbox" />
+                    <span>{{ t('home.shareEnabled') }}</span>
+                  </label>
+                  <label class="home-share-check">
+                    <input v-model="item.shareRequireLogin" type="checkbox" :disabled="!item.shareEnabled" />
+                    <span>{{ t('home.shareRequireLogin') }}</span>
+                  </label>
+                  <label class="home-share-check">
+                    <input
+                      v-model="item.shareAllowGuestEdit"
+                      type="checkbox"
+                      :disabled="!item.shareEnabled || item.shareRequireLogin"
+                    />
+                    <span>{{ t('home.shareGuestCanEdit') }}</span>
+                  </label>
+                  <div class="home-share-actions">
+                    <button
+                      :disabled="shareSavingId === `mindmap:${item.id}`"
+                      @click="applyShareSettings(item, 'mindmap')"
+                    >
+                      {{ t('home.applyShareSettings') }}
+                    </button>
+                    <a
+                      v-if="item.shareEnabled && item.shareCode"
+                      :href="getShareUrl(item.shareCode)"
+                      target="_blank"
+                    >
+                      {{ t('home.shareLink') }}
+                    </a>
+                  </div>
+                </div>
               </div>
               <div class="actions">
                 <button class="primary" @click="openEditor(item.id)">{{ t('home.openEditor') }}</button>
@@ -229,6 +297,33 @@ async function deleteTodo(id) {
               <div>
                 <strong>{{ item.title }}</strong>
                 <div class="hint">{{ new Date(item.updatedAtUnixMs).toLocaleString() }}</div>
+                <div class="home-share-settings">
+                  <div class="home-share-title">{{ t('home.shareSettings') }}</div>
+                  <label class="home-share-check">
+                    <input v-model="item.shareEnabled" type="checkbox" />
+                    <span>{{ t('home.shareEnabled') }}</span>
+                  </label>
+                  <label class="home-share-check">
+                    <input v-model="item.shareRequireLogin" type="checkbox" :disabled="!item.shareEnabled" />
+                    <span>{{ t('home.shareRequireLogin') }}</span>
+                  </label>
+                  <label class="home-share-check">
+                    <input
+                      v-model="item.shareAllowGuestEdit"
+                      type="checkbox"
+                      :disabled="!item.shareEnabled || item.shareRequireLogin"
+                    />
+                    <span>{{ t('home.shareGuestCanEdit') }}</span>
+                  </label>
+                  <div class="home-share-actions">
+                    <button
+                      :disabled="shareSavingId === `todo:${item.id}`"
+                      @click="applyShareSettings(item, 'todo')"
+                    >
+                      {{ t('home.applyShareSettings') }}
+                    </button>
+                  </div>
+                </div>
               </div>
               <div class="actions">
                 <button class="primary" @click="openTodo(item.id)">{{ t('home.openTodo') }}</button>

@@ -31,6 +31,7 @@ public static class PbEndpoints
         todos.MapPost("/get", GetTodoAsync);
         todos.MapPost("/update", UpdateTodoAsync);
         todos.MapPost("/delete", DeleteTodoAsync);
+        todos.MapPost("/share", CreateTodoShareAsync);
 
         var share = group.MapGroup("/share");
         share.MapPost("/get", GetSharedAsync);
@@ -116,7 +117,10 @@ public static class PbEndpoints
                 Id = m.Id.ToString(),
                 Title = m.Title,
                 UpdatedAtUnixMs = new DateTimeOffset(m.UpdatedAtUtc).ToUnixTimeMilliseconds(),
-                ShareCode = m.ShareCode ?? string.Empty
+                ShareCode = m.ShareCode ?? string.Empty,
+                ShareEnabled = m.ShareEnabled,
+                ShareRequireLogin = m.ShareRequireLogin,
+                ShareAllowGuestEdit = m.ShareAllowGuestEdit,
             })
             .ToList();
 
@@ -230,17 +234,60 @@ public static class PbEndpoints
             return PbIo.Write(new PbShareResponse { Success = false, Message = "mindmap not found" });
         }
 
-        map.ShareCode ??= await ShareCodeGenerator.GenerateUniqueCodeAsync(db);
+        if (body.Enabled && string.IsNullOrWhiteSpace(map.ShareCode))
+        {
+            map.ShareCode = await ShareCodeGenerator.GenerateUniqueCodeAsync(db);
+        }
+        map.ShareEnabled = body.Enabled;
         map.ShareRequireLogin = body.RequireLogin;
+        map.ShareAllowGuestEdit = body.GuestCanEdit;
         map.UpdatedAtUtc = DateTime.UtcNow;
         await db.SaveChangesAsync();
 
         return PbIo.Write(new PbShareResponse
         {
             Success = true,
-            ShareCode = map.ShareCode,
-            RelativeUrl = $"/share/{map.ShareCode}",
+            ShareCode = map.ShareCode ?? string.Empty,
+            RelativeUrl = map.ShareEnabled && !string.IsNullOrWhiteSpace(map.ShareCode) ? $"/share/{map.ShareCode}" : string.Empty,
             RequireLogin = map.ShareRequireLogin,
+            Enabled = map.ShareEnabled,
+            GuestCanEdit = map.ShareAllowGuestEdit,
+        });
+    }
+
+    private static async Task<IResult> CreateTodoShareAsync(ClaimsPrincipal principal, HttpRequest request, AppDbContext db)
+    {
+        var body = await PbIo.ReadAsync<PbCreateTodoShareRequest>(request);
+        if (!Guid.TryParse(body.TodoId, out var todoId))
+        {
+            return PbIo.Write(new PbShareResponse { Success = false, Message = "invalid todo id" });
+        }
+
+        var userId = principal.GetUserId();
+        var todo = await db.MindMaps.SingleOrDefaultAsync(x => x.Id == todoId && x.OwnerId == userId);
+        if (todo is null || !IsTodoContent(todo.ContentJson))
+        {
+            return PbIo.Write(new PbShareResponse { Success = false, Message = "todo not found" });
+        }
+
+        if (body.Enabled && string.IsNullOrWhiteSpace(todo.ShareCode))
+        {
+            todo.ShareCode = await ShareCodeGenerator.GenerateUniqueCodeAsync(db);
+        }
+        todo.ShareEnabled = body.Enabled;
+        todo.ShareRequireLogin = body.RequireLogin;
+        todo.ShareAllowGuestEdit = body.GuestCanEdit;
+        todo.UpdatedAtUtc = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+
+        return PbIo.Write(new PbShareResponse
+        {
+            Success = true,
+            ShareCode = todo.ShareCode ?? string.Empty,
+            RelativeUrl = todo.ShareEnabled && !string.IsNullOrWhiteSpace(todo.ShareCode) ? $"/share/{todo.ShareCode}" : string.Empty,
+            RequireLogin = todo.ShareRequireLogin,
+            Enabled = todo.ShareEnabled,
+            GuestCanEdit = todo.ShareAllowGuestEdit,
         });
     }
 
@@ -256,6 +303,11 @@ public static class PbEndpoints
         if (map is null || IsTodoContent(map.ContentJson))
         {
             return PbIo.Write(new PbMindMapDetailResponse { Success = false, Message = "share link not found" });
+        }
+
+        if (!map.ShareEnabled)
+        {
+            return PbIo.Write(new PbMindMapDetailResponse { Success = false, Message = "share is disabled" });
         }
 
         if (map.ShareRequireLogin && !IsAuthenticated(request.HttpContext))
@@ -282,9 +334,14 @@ public static class PbEndpoints
             return PbIo.Write(new PbStatusResponse { Success = false, Message = "share link not found" });
         }
 
-        if (map.ShareRequireLogin && !IsAuthenticated(request.HttpContext))
+        if (!map.ShareEnabled)
         {
-            return PbIo.Write(new PbStatusResponse { Success = false, Message = "login required for this share link" });
+            return PbIo.Write(new PbStatusResponse { Success = false, Message = "share is disabled" });
+        }
+
+        if (!CanEditByShare(request.HttpContext, map))
+        {
+            return PbIo.Write(new PbStatusResponse { Success = false, Message = "no permission to edit shared content" });
         }
 
         map.ContentJson = string.IsNullOrWhiteSpace(body.ContentJson) ? map.ContentJson : body.ContentJson;
@@ -307,6 +364,11 @@ public static class PbEndpoints
         if (map is null || IsTodoContent(map.ContentJson))
         {
             return PbIo.Write(new PbShareHistoryListResponse { Success = false, Message = "share link not found" });
+        }
+
+        if (!map.ShareEnabled)
+        {
+            return PbIo.Write(new PbShareHistoryListResponse { Success = false, Message = "share is disabled" });
         }
 
         if (map.ShareRequireLogin && !IsAuthenticated(request.HttpContext))
@@ -352,9 +414,14 @@ public static class PbEndpoints
             return PbIo.Write(new PbStatusResponse { Success = false, Message = "share link not found" });
         }
 
-        if (map.ShareRequireLogin && !IsAuthenticated(request.HttpContext))
+        if (!map.ShareEnabled)
         {
-            return PbIo.Write(new PbStatusResponse { Success = false, Message = "login required for this share link" });
+            return PbIo.Write(new PbStatusResponse { Success = false, Message = "share is disabled" });
+        }
+
+        if (!CanEditByShare(request.HttpContext, map))
+        {
+            return PbIo.Write(new PbStatusResponse { Success = false, Message = "no permission to edit shared content" });
         }
 
         var actionType = NormalizeActionType(body.ActionType);
@@ -379,6 +446,10 @@ public static class PbEndpoints
                 Id = m.Id.ToString(),
                 Title = m.Title,
                 UpdatedAtUnixMs = new DateTimeOffset(m.UpdatedAtUtc).ToUnixTimeMilliseconds(),
+                ShareCode = m.ShareCode ?? string.Empty,
+                ShareEnabled = m.ShareEnabled,
+                ShareRequireLogin = m.ShareRequireLogin,
+                ShareAllowGuestEdit = m.ShareAllowGuestEdit,
             })
             .ToList();
 
@@ -487,6 +558,8 @@ public static class PbEndpoints
             UpdatedAtUnixMs = new DateTimeOffset(map.UpdatedAtUtc).ToUnixTimeMilliseconds(),
             ShareCode = map.ShareCode ?? string.Empty,
             ShareRequireLogin = map.ShareRequireLogin,
+            ShareEnabled = map.ShareEnabled,
+            ShareAllowGuestEdit = map.ShareAllowGuestEdit,
         };
 
     private static PbTodoDetailResponse ToTodoDetail(MindMapDocument todo) =>
@@ -497,6 +570,10 @@ public static class PbEndpoints
             Title = todo.Title,
             ContentJson = todo.ContentJson,
             UpdatedAtUnixMs = new DateTimeOffset(todo.UpdatedAtUtc).ToUnixTimeMilliseconds(),
+            ShareCode = todo.ShareCode ?? string.Empty,
+            ShareEnabled = todo.ShareEnabled,
+            ShareRequireLogin = todo.ShareRequireLogin,
+            ShareAllowGuestEdit = todo.ShareAllowGuestEdit,
         };
 
     private static bool IsTodoContent(string contentJson)
@@ -521,6 +598,27 @@ public static class PbEndpoints
     private static bool IsAuthenticated(HttpContext context)
     {
         return context.User?.Identity?.IsAuthenticated == true;
+    }
+
+    private static bool CanEditByShare(HttpContext context, MindMapDocument map)
+    {
+        if (!map.ShareEnabled)
+        {
+            return false;
+        }
+
+        var isAuthenticated = IsAuthenticated(context);
+        if (map.ShareRequireLogin && !isAuthenticated)
+        {
+            return false;
+        }
+
+        if (!isAuthenticated && !map.ShareAllowGuestEdit)
+        {
+            return false;
+        }
+
+        return true;
     }
 
     private static async Task LogShareHistoryAsync(

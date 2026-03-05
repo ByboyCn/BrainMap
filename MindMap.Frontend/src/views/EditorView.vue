@@ -26,7 +26,9 @@ const map = reactive({
   title: '',
   contentJson: '{"nodes":[],"edges":[],"meta":{"backgroundColor":"#ffffff"}}',
   shareCode: '',
+  shareEnabled: false,
   shareRequireLogin: false,
+  shareAllowGuestEdit: true,
 })
 let saveTimer = null
 
@@ -103,7 +105,9 @@ async function loadMap() {
     map.title = payload.title
     map.contentJson = payload.contentJson || '{"nodes":[],"edges":[],"meta":{"backgroundColor":"#ffffff"}}'
     map.shareCode = payload.shareCode || ''
+    map.shareEnabled = !!payload.shareEnabled
     map.shareRequireLogin = !!payload.shareRequireLogin
+    map.shareAllowGuestEdit = !!payload.shareAllowGuestEdit
     shareLink.value = payload.shareCode ? `${window.location.origin}/share/${payload.shareCode}` : ''
     lastSavedSignature.value = buildSignature()
     isLoaded.value = true
@@ -121,9 +125,11 @@ async function openSharePageByDefault() {
   error.value = ''
   try {
     if (!map.shareCode) {
-      const result = await pbCreateShare(map.id, map.shareRequireLogin)
+      const result = await pbCreateShare(map.id, map.shareRequireLogin, true, map.shareAllowGuestEdit)
       map.shareCode = result.shareCode || ''
+      map.shareEnabled = !!result.enabled
       map.shareRequireLogin = !!result.requireLogin
+      map.shareAllowGuestEdit = !!result.guestCanEdit
       shareLink.value = `${window.location.origin}${result.relativeUrl}`
     }
     if (map.shareCode) {
@@ -195,9 +201,11 @@ async function createShareLink() {
   await saveMap(true)
   busy.value = true
   try {
-    const result = await pbCreateShare(map.id, map.shareRequireLogin)
+    const result = await pbCreateShare(map.id, map.shareRequireLogin, true, map.shareAllowGuestEdit)
     map.shareCode = result.shareCode || map.shareCode
+    map.shareEnabled = !!result.enabled
     map.shareRequireLogin = !!result.requireLogin
+    map.shareAllowGuestEdit = !!result.guestCanEdit
     shareLink.value = `${window.location.origin}${result.relativeUrl}`
     messageKey.value = 'editor.shareGenerated'
   } catch (err) {

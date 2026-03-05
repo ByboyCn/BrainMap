@@ -259,6 +259,30 @@ static void EnsureSqliteSchema(AppDbContext db)
     {
         // ignore when column already exists
     }
+    try
+    {
+        db.Database.ExecuteSqlRaw("ALTER TABLE MindMaps ADD COLUMN ShareEnabled INTEGER NOT NULL DEFAULT 0;");
+    }
+    catch
+    {
+        // ignore when column already exists
+    }
+    try
+    {
+        db.Database.ExecuteSqlRaw("ALTER TABLE MindMaps ADD COLUMN ShareAllowGuestEdit INTEGER NOT NULL DEFAULT 1;");
+    }
+    catch
+    {
+        // ignore when column already exists
+    }
+    try
+    {
+        db.Database.ExecuteSqlRaw("UPDATE MindMaps SET ShareEnabled = 1 WHERE IFNULL(ShareCode, '') <> '';");
+    }
+    catch
+    {
+        // ignore when upgrade is partially applied
+    }
 
     db.Database.ExecuteSqlRaw(
         """

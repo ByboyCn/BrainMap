@@ -180,12 +180,63 @@ h3 {
 .map-item {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   border: 1px solid #d6e4ff;
   border-radius: 10px;
   background: #fff;
   padding: 10px;
+}
+
+.home-share-settings {
+  margin-top: 8px;
+  padding: 8px;
+  border: 1px dashed #c7d9f7;
+  border-radius: 8px;
+  background: #f8fbff;
+}
+
+.home-share-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #37547f;
+  margin-bottom: 6px;
+}
+
+.home-share-check {
+  width: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 4px;
+  font-size: 12px;
+  color: #35507a;
+}
+
+.home-share-check input[type='checkbox'] {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+}
+
+.home-share-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.home-share-actions button {
+  width: auto;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.home-share-actions a {
+  font-size: 12px;
+  color: #1e63eb;
+  word-break: break-all;
 }
 
 .editor-page {
@@ -520,6 +571,22 @@ button:disabled {
   font-size: 12px;
   color: #3f5b85;
   font-weight: 600;
+}
+
+.share-access-check {
+  width: auto;
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #3f5b85;
+}
+
+.share-access-check input[type='checkbox'] {
+  width: 14px;
+  height: 14px;
+  margin: 0;
 }
 
 .share-access-select {

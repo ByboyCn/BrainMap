@@ -36,7 +36,9 @@ const shareHistory = ref([])
 const historyLoading = ref(false)
 const session = ref(getSession())
 const mapId = ref('')
+const shareEnabled = ref(true)
 const shareRequireLogin = ref(false)
+const shareAllowGuestEdit = ref(true)
 const accessSaving = ref(false)
 
 let connection = null
@@ -64,6 +66,13 @@ const shareDisplayTitle = computed(() => {
   return `${t('share.mapPrefix')} + ${name}`
 })
 const canManageShare = computed(() => !!session.value?.token && !!mapId.value)
+const isAuthenticated = computed(() => !!session.value?.token)
+const canEditShared = computed(() => {
+  if (!shareEnabled.value) return false
+  if (shareRequireLogin.value) return isAuthenticated.value
+  if (!isAuthenticated.value && !shareAllowGuestEdit.value) return false
+  return true
+})
 onMounted(async () => {
   document.addEventListener('click', handleDocumentClick)
   window.addEventListener('resize', handleResize)
@@ -95,6 +104,7 @@ onBeforeUnmount(async () => {
 
 watch(contentJson, () => {
   if (!isLoaded.value || suppressWatch.value) return
+  if (!canEditShared.value) return
   scheduleAutoSave()
   scheduleBroadcast()
 })
@@ -152,7 +162,9 @@ async function loadMap() {
     const payload = await pbGetShared(shareCode)
     mapId.value = payload.id || ''
     mapTitle.value = payload.title
+    shareEnabled.value = !!payload.shareEnabled
     shareRequireLogin.value = !!payload.shareRequireLogin
+    shareAllowGuestEdit.value = !!payload.shareAllowGuestEdit
     suppressWatch.value = true
     contentJson.value = payload.contentJson || '{"nodes":[],"edges":[]}'
     lastSavedContent.value = contentJson.value
@@ -170,8 +182,15 @@ async function applyShareAccessMode() {
   accessSaving.value = true
   error.value = ''
   try {
-    const result = await pbCreateShare(mapId.value, !!shareRequireLogin.value)
+    const result = await pbCreateShare(
+      mapId.value,
+      !!shareRequireLogin.value,
+      !!shareEnabled.value,
+      shareRequireLogin.value ? false : !!shareAllowGuestEdit.value
+    )
+    shareEnabled.value = !!result.enabled
     shareRequireLogin.value = !!result.requireLogin
+    shareAllowGuestEdit.value = !!result.guestCanEdit
     messageKey.value = 'share.accessSaved'
   } catch (err) {
     error.value = err.message
@@ -305,6 +324,7 @@ function onMouseMove(event) {
 }
 
 async function broadcastSharedContent() {
+  if (!canEditShared.value) return
   if (remoteApplying.value) return
   if (!connection || connection.state !== 'Connected') return
   if (!isLoaded.value) return
@@ -316,6 +336,7 @@ async function broadcastSharedContent() {
 }
 
 async function saveShared(force = true) {
+  if (!canEditShared.value) return
   if (!isLoaded.value) return
   if (saveTimer && force) {
     clearTimeout(saveTimer)
@@ -373,6 +394,7 @@ async function loadShareHistory() {
 }
 
 async function onCanvasOperation(payload) {
+  if (!canEditShared.value) return
   if (!payload?.actionType) return
   try {
     await pbAddShareHistory(
@@ -417,6 +439,7 @@ function formatHistoryTime(unixMs) {
         v-model="contentJson"
         :height="canvasHeight"
         :show-toolbar="false"
+        :readonly="!canEditShared"
         @operation="onCanvasOperation"
       />
 
@@ -425,14 +448,22 @@ function formatHistoryTime(unixMs) {
         <div class="share-meta">{{ t('share.signalr') }}: {{ connectStateLabel }} | {{ t('share.autoSave') }}: {{ autoSaveStatus }}</div>
         <div v-if="canManageShare" class="share-access-row">
           <span class="share-access-label">{{ t('share.accessTitle') }}</span>
+          <label class="share-access-check">
+            <input v-model="shareEnabled" type="checkbox" />
+            <span>{{ t('home.shareEnabled') }}</span>
+          </label>
           <select v-model="shareRequireLogin" class="share-access-select">
             <option :value="false">{{ t('share.accessPublicOperate') }}</option>
             <option :value="true">{{ t('share.accessLoginOperate') }}</option>
           </select>
+          <label class="share-access-check">
+            <input v-model="shareAllowGuestEdit" type="checkbox" :disabled="shareRequireLogin || !shareEnabled" />
+            <span>{{ t('home.shareGuestCanEdit') }}</span>
+          </label>
           <button :disabled="accessSaving" @click="applyShareAccessMode">{{ t('share.applyAccess') }}</button>
         </div>
         <div class="actions">
-          <button class="primary" :disabled="saving" @click="saveShared(true)">{{ t('share.saveShared') }}</button>
+          <button class="primary" :disabled="saving || !canEditShared" @click="saveShared(true)">{{ t('share.saveShared') }}</button>
           <a href="/">{{ t('share.backHome') }}</a>
         </div>
         <div class="share-history">
