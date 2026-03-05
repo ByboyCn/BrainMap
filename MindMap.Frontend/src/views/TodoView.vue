@@ -244,7 +244,7 @@ async function loadTodo() {
     todo.title = payload.title || t('todo.defaultTitle')
     todo.sortBy = parsed.sortBy
     todo.items = parsed.items
-    selectedItemId.value = parsed.items[0]?.id || ''
+    selectedItemId.value = ''
     lastSavedSignature.value = buildSignature()
     isLoaded.value = true
   } catch (err) {
@@ -280,9 +280,6 @@ async function saveTodo(force = true) {
     todo.title = payload.title
     todo.sortBy = parsed.sortBy
     todo.items = parsed.items
-    if (!selectedItemId.value && parsed.items.length > 0) {
-      selectedItemId.value = parsed.items[0].id
-    }
     lastSavedSignature.value = buildSignature()
     messageKey.value = force ? 'share.saved' : 'share.autoSaved'
   } catch (err) {
@@ -294,7 +291,7 @@ async function saveTodo(force = true) {
 }
 
 function selectItem(itemId) {
-  selectedItemId.value = itemId
+  selectedItemId.value = selectedItemId.value === itemId ? '' : itemId
 }
 
 function addItem() {
@@ -319,7 +316,6 @@ function addItem() {
     startedAtUnixMs: 0,
     completedAtUnixMs: 0,
   })
-  selectedItemId.value = itemId
   draftText.value = ''
 }
 
@@ -348,7 +344,7 @@ function toggleArchived(itemId) {
 function removeItem(itemId) {
   todo.items = todo.items.filter((item) => item.id !== itemId)
   if (selectedItemId.value === itemId) {
-    selectedItemId.value = todo.items[0]?.id || ''
+    selectedItemId.value = ''
   }
 }
 
@@ -397,6 +393,12 @@ function addSubtask() {
 
 function toggleSubtask(subtaskId) {
   const item = selectedItem.value
+  if (!item) return
+  toggleSubtaskByItem(item.id, subtaskId)
+}
+
+function toggleSubtaskByItem(itemId, subtaskId) {
+  const item = todo.items.find((task) => task.id === itemId)
   if (!item) return
   patchItem(item.id, {
     subtasks: item.subtasks.map((subtask) =>
@@ -457,9 +459,9 @@ async function backHome() {
         </div>
       </div>
 
-      <div class="todo-content">
-        <section class="todo-list-pane">
-          <div class="todo-body">
+      <div class="todo-content" :class="{ 'has-detail': !!selectedItem }">
+        <section class="todo-list-pane" :class="{ 'with-detail': !!selectedItem }">
+          <div class="todo-body" @click.self="selectedItemId = ''">
             <section class="todo-group">
               <div class="todo-group-label">{{ t('todo.groupPending') }}</div>
               <div
@@ -473,6 +475,22 @@ async function backHome() {
                 <div class="todo-item-main">
                   <div class="todo-item-title">{{ item.title }}</div>
                   <div v-if="item.subtasks.length" class="todo-item-sub">{{ getSubtaskSummary(item) }}</div>
+                  <div v-if="item.subtasks.length" class="todo-inline-subtasks">
+                    <div
+                      v-for="subtask in item.subtasks"
+                      :key="subtask.id"
+                      class="todo-inline-subtask-row"
+                    >
+                      <button
+                        class="todo-inline-subtask-check"
+                        :class="{ checked: subtask.done }"
+                        @click.stop="toggleSubtaskByItem(item.id, subtask.id)"
+                      >
+                        {{ subtask.done ? '✓' : '' }}
+                      </button>
+                      <span class="todo-inline-subtask-text" :class="{ done: subtask.done }">{{ subtask.title }}</span>
+                    </div>
+                  </div>
                 </div>
                 <div class="todo-item-actions">
                   <button class="todo-mini" @click.stop="toggleArchived(item.id)">{{ t('todo.archive') }}</button>
@@ -494,6 +512,22 @@ async function backHome() {
                 <div class="todo-item-main">
                   <div class="todo-item-title">{{ item.title }}</div>
                   <div v-if="item.subtasks.length" class="todo-item-sub">{{ getSubtaskSummary(item) }}</div>
+                  <div v-if="item.subtasks.length" class="todo-inline-subtasks">
+                    <div
+                      v-for="subtask in item.subtasks"
+                      :key="subtask.id"
+                      class="todo-inline-subtask-row"
+                    >
+                      <button
+                        class="todo-inline-subtask-check"
+                        :class="{ checked: subtask.done }"
+                        @click.stop="toggleSubtaskByItem(item.id, subtask.id)"
+                      >
+                        {{ subtask.done ? '✓' : '' }}
+                      </button>
+                      <span class="todo-inline-subtask-text" :class="{ done: subtask.done }">{{ subtask.title }}</span>
+                    </div>
+                  </div>
                 </div>
                 <div class="todo-item-actions">
                   <button class="todo-mini" @click.stop="toggleArchived(item.id)">{{ t('todo.archive') }}</button>
@@ -515,6 +549,22 @@ async function backHome() {
                 <div class="todo-item-main">
                   <div class="todo-item-title">{{ item.title }}</div>
                   <div v-if="item.subtasks.length" class="todo-item-sub">{{ getSubtaskSummary(item) }}</div>
+                  <div v-if="item.subtasks.length" class="todo-inline-subtasks">
+                    <div
+                      v-for="subtask in item.subtasks"
+                      :key="subtask.id"
+                      class="todo-inline-subtask-row"
+                    >
+                      <button
+                        class="todo-inline-subtask-check"
+                        :class="{ checked: subtask.done }"
+                        @click.stop="toggleSubtaskByItem(item.id, subtask.id)"
+                      >
+                        {{ subtask.done ? '✓' : '' }}
+                      </button>
+                      <span class="todo-inline-subtask-text" :class="{ done: subtask.done }">{{ subtask.title }}</span>
+                    </div>
+                  </div>
                 </div>
                 <div class="todo-item-actions">
                   <button class="todo-mini" @click.stop="toggleArchived(item.id)">{{ t('todo.unarchive') }}</button>
@@ -536,6 +586,22 @@ async function backHome() {
                 <div class="todo-item-main">
                   <div class="todo-item-title">{{ item.title }}</div>
                   <div v-if="item.subtasks.length" class="todo-item-sub">{{ getSubtaskSummary(item) }}</div>
+                  <div v-if="item.subtasks.length" class="todo-inline-subtasks">
+                    <div
+                      v-for="subtask in item.subtasks"
+                      :key="subtask.id"
+                      class="todo-inline-subtask-row"
+                    >
+                      <button
+                        class="todo-inline-subtask-check"
+                        :class="{ checked: subtask.done }"
+                        @click.stop="toggleSubtaskByItem(item.id, subtask.id)"
+                      >
+                        {{ subtask.done ? '✓' : '' }}
+                      </button>
+                      <span class="todo-inline-subtask-text" :class="{ done: subtask.done }">{{ subtask.title }}</span>
+                    </div>
+                  </div>
                 </div>
                 <div class="todo-item-actions">
                   <button class="todo-mini" @click.stop="toggleArchived(item.id)">{{ t('todo.unarchive') }}</button>
@@ -649,11 +715,6 @@ async function backHome() {
           </div>
 
           <div class="todo-created-at">{{ t('todo.createdAt') }}: {{ formatDateTime(selectedItem.createdAtUnixMs) }}</div>
-        </aside>
-
-        <aside v-else class="todo-detail-pane empty">
-          <h3>{{ t('todo.detailTitle') }}</h3>
-          <p>{{ t('todo.selectHint') }}</p>
         </aside>
       </div>
     </section>

@@ -761,14 +761,22 @@ button:disabled {
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 420px;
+  grid-template-columns: minmax(0, 1fr);
   gap: 0;
+}
+
+.todo-content.has-detail {
+  grid-template-columns: minmax(0, 1fr) 420px;
 }
 
 .todo-list-pane {
   position: relative;
   min-width: 0;
   min-height: 0;
+  border-right: 0;
+}
+
+.todo-list-pane.with-detail {
   border-right: 1px solid rgba(219, 240, 241, 0.25);
 }
 
@@ -797,6 +805,7 @@ button:disabled {
   border-radius: 8px;
   border: 1px solid rgba(202, 223, 227, 0.38);
   background: rgba(221, 232, 235, 0.82);
+  cursor: pointer;
 }
 
 .todo-item-row.active {
@@ -818,6 +827,44 @@ button:disabled {
   margin-top: 2px;
   color: #5b7478;
   font-size: 12px;
+}
+
+.todo-inline-subtasks {
+  margin-top: 4px;
+}
+
+.todo-inline-subtask-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.todo-inline-subtask-check {
+  width: 14px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1.5px solid #58777b;
+  background: transparent;
+  color: #fff;
+  font-size: 9px;
+  line-height: 1;
+}
+
+.todo-inline-subtask-check.checked {
+  background: #58777b;
+}
+
+.todo-inline-subtask-text {
+  color: #516b70;
+  font-size: 12px;
+}
+
+.todo-inline-subtask-text.done {
+  text-decoration: line-through;
+  color: #6e8387;
 }
 
 .todo-check {
@@ -1058,6 +1105,10 @@ button:disabled {
   }
 
   .todo-content {
+    grid-template-columns: 1fr;
+  }
+
+  .todo-content.has-detail {
     grid-template-columns: 1fr;
   }
 
