@@ -378,15 +378,16 @@ function addSubtask() {
   const title = String(subtaskDraft.value || '').trim()
   if (!title) return
 
+  const nextSubtasks = [
+    ...item.subtasks,
+    {
+      id: `sub-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+      title,
+      done: false,
+    },
+  ]
   patchItem(item.id, {
-    subtasks: [
-      ...item.subtasks,
-      {
-        id: `sub-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
-        title,
-        done: false,
-      },
-    ],
+    ...buildSubtaskDrivenPatch(item, nextSubtasks),
   })
   subtaskDraft.value = ''
 }
@@ -400,19 +401,49 @@ function toggleSubtask(subtaskId) {
 function toggleSubtaskByItem(itemId, subtaskId) {
   const item = todo.items.find((task) => task.id === itemId)
   if (!item) return
+  const nextSubtasks = item.subtasks.map((subtask) =>
+    subtask.id === subtaskId ? { ...subtask, done: !subtask.done } : subtask
+  )
   patchItem(item.id, {
-    subtasks: item.subtasks.map((subtask) =>
-      subtask.id === subtaskId ? { ...subtask, done: !subtask.done } : subtask
-    ),
+    ...buildSubtaskDrivenPatch(item, nextSubtasks),
   })
 }
 
 function removeSubtask(subtaskId) {
   const item = selectedItem.value
   if (!item) return
+  const nextSubtasks = item.subtasks.filter((subtask) => subtask.id !== subtaskId)
   patchItem(item.id, {
-    subtasks: item.subtasks.filter((subtask) => subtask.id !== subtaskId),
+    ...buildSubtaskDrivenPatch(item, nextSubtasks),
   })
+}
+
+function buildSubtaskDrivenPatch(item, nextSubtasks) {
+  const patch = { subtasks: nextSubtasks }
+  if (nextSubtasks.length === 0) {
+    return patch
+  }
+
+  const allDone = nextSubtasks.every((subtask) => subtask.done)
+  if (allDone) {
+    const now = Date.now()
+    return {
+      ...patch,
+      completed: true,
+      startedAtUnixMs: item.startedAtUnixMs || now,
+      completedAtUnixMs: now,
+    }
+  }
+
+  if (item.completed) {
+    return {
+      ...patch,
+      completed: false,
+      completedAtUnixMs: 0,
+    }
+  }
+
+  return patch
 }
 
 function toggleSelectedCompleted() {
