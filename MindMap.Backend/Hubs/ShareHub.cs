@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using MindMap.Backend.Data;
 using MindMap.Backend.Services;
 using Microsoft.AspNetCore.SignalR;
@@ -13,10 +13,16 @@ public class ShareHub(AppDbContext db, PresenceService presenceService) : Hub
 
     public async Task JoinShare(string shareCode, string? displayName)
     {
-        var exists = await _db.MindMaps.AnyAsync(m => m.ShareCode == shareCode);
-        if (!exists)
+        var map = await _db.MindMaps.SingleOrDefaultAsync(m => m.ShareCode == shareCode);
+        if (map is null)
         {
-            throw new HubException("分享房间不存在。");
+            throw new HubException("share room not found");
+        }
+
+        var isAuthenticated = Context.User?.Identity?.IsAuthenticated == true;
+        if (map.ShareRequireLogin && !isAuthenticated)
+        {
+            throw new HubException("this share requires login");
         }
 
         await Groups.AddToGroupAsync(Context.ConnectionId, shareCode);

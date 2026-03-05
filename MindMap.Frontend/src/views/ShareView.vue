@@ -58,7 +58,9 @@ onMounted(async () => {
   window.addEventListener('resize', handleResize)
   handleResize()
   await loadMap()
-  await connectHub()
+  if (!error.value) {
+    await connectHub()
+  }
 })
 
 onBeforeUnmount(async () => {

@@ -25,6 +25,7 @@ const map = reactive({
   title: '',
   contentJson: '{"nodes":[],"edges":[],"meta":{"backgroundColor":"#ffffff"}}',
   shareCode: '',
+  shareRequireLogin: false,
 })
 let saveTimer = null
 
@@ -88,6 +89,7 @@ async function loadMap() {
     map.title = payload.title
     map.contentJson = payload.contentJson || '{"nodes":[],"edges":[],"meta":{"backgroundColor":"#ffffff"}}'
     map.shareCode = payload.shareCode || ''
+    map.shareRequireLogin = !!payload.shareRequireLogin
     shareLink.value = payload.shareCode ? `${window.location.origin}/share/${payload.shareCode}` : ''
     lastSavedSignature.value = buildSignature()
     isLoaded.value = true
@@ -105,8 +107,9 @@ async function openSharePageByDefault() {
   error.value = ''
   try {
     if (!map.shareCode) {
-      const result = await pbCreateShare(map.id)
+      const result = await pbCreateShare(map.id, map.shareRequireLogin)
       map.shareCode = result.shareCode || ''
+      map.shareRequireLogin = !!result.requireLogin
       shareLink.value = `${window.location.origin}${result.relativeUrl}`
     }
     if (map.shareCode) {
@@ -178,8 +181,9 @@ async function createShareLink() {
   await saveMap(true)
   busy.value = true
   try {
-    const result = await pbCreateShare(map.id)
+    const result = await pbCreateShare(map.id, map.shareRequireLogin)
     map.shareCode = result.shareCode || map.shareCode
+    map.shareRequireLogin = !!result.requireLogin
     shareLink.value = `${window.location.origin}${result.relativeUrl}`
     messageKey.value = 'editor.shareGenerated'
   } catch (err) {
@@ -216,6 +220,10 @@ async function backHome() {
 
         <div class="actions">
           <button class="primary" :disabled="busy || saving" @click="saveNow">{{ t('editor.saveNow') }}</button>
+          <label class="share-access-toggle">
+            <input v-model="map.shareRequireLogin" type="checkbox" />
+            <span>{{ t('editor.shareRequireLogin') }}</span>
+          </label>
           <button :disabled="busy" @click="createShareLink">{{ t('editor.generateShareLink') }}</button>
           <a v-if="shareLink" :href="shareLink" target="_blank">{{ t('editor.openSharePage') }}</a>
         </div>

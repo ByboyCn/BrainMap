@@ -35,6 +35,11 @@ message PbUpdateMindMapRequest {
   string contentJson = 3;
 }
 
+message PbCreateShareRequest {
+  string mapId = 1;
+  bool requireLogin = 2;
+}
+
 message PbShareCodeRequest {
   string shareCode = 1;
 }
@@ -42,6 +47,21 @@ message PbShareCodeRequest {
 message PbUpdateSharedRequest {
   string shareCode = 1;
   string contentJson = 2;
+}
+
+message PbTodoIdRequest {
+  string todoId = 1;
+}
+
+message PbCreateTodoRequest {
+  string title = 1;
+  string contentJson = 2;
+}
+
+message PbUpdateTodoRequest {
+  string todoId = 1;
+  string title = 2;
+  string contentJson = 3;
 }
 
 message PbMindMapSummary {
@@ -65,6 +85,7 @@ message PbMindMapDetailResponse {
   string contentJson = 5;
   int64 updatedAtUnixMs = 6;
   string shareCode = 7;
+  bool shareRequireLogin = 8;
 }
 
 message PbShareResponse {
@@ -72,11 +93,33 @@ message PbShareResponse {
   string message = 2;
   string shareCode = 3;
   string relativeUrl = 4;
+  bool requireLogin = 5;
 }
 
 message PbStatusResponse {
   bool success = 1;
   string message = 2;
+}
+
+message PbTodoSummary {
+  string id = 1;
+  string title = 2;
+  int64 updatedAtUnixMs = 3;
+}
+
+message PbTodoListResponse {
+  bool success = 1;
+  string message = 2;
+  repeated PbTodoSummary todos = 3;
+}
+
+message PbTodoDetailResponse {
+  bool success = 1;
+  string message = 2;
+  string id = 3;
+  string title = 4;
+  string contentJson = 5;
+  int64 updatedAtUnixMs = 6;
 }
 `
 
@@ -165,17 +208,42 @@ export async function pbDeleteMap(mapId) {
   return assertSuccess(result)
 }
 
-export async function pbCreateShare(mapId) {
-  const result = await pbRequest('/pb/mindmaps/share', 'PbMindMapIdRequest', 'PbShareResponse', { mapId }, true)
+export async function pbCreateShare(mapId, requireLogin = false) {
+  const result = await pbRequest('/pb/mindmaps/share', 'PbCreateShareRequest', 'PbShareResponse', { mapId, requireLogin }, true)
   return assertSuccess(result)
 }
 
 export async function pbGetShared(shareCode) {
-  const result = await pbRequest('/pb/share/get', 'PbShareCodeRequest', 'PbMindMapDetailResponse', { shareCode })
+  const result = await pbRequest('/pb/share/get', 'PbShareCodeRequest', 'PbMindMapDetailResponse', { shareCode }, true)
   return assertSuccess(result)
 }
 
 export async function pbUpdateShared(shareCode, contentJson) {
-  const result = await pbRequest('/pb/share/update', 'PbUpdateSharedRequest', 'PbStatusResponse', { shareCode, contentJson })
+  const result = await pbRequest('/pb/share/update', 'PbUpdateSharedRequest', 'PbStatusResponse', { shareCode, contentJson }, true)
+  return assertSuccess(result)
+}
+
+export async function pbListTodos() {
+  const result = await pbRequest('/pb/todos/list', 'PbEmptyRequest', 'PbTodoListResponse', {}, true)
+  return assertSuccess(result).todos
+}
+
+export async function pbCreateTodo(title, contentJson) {
+  const result = await pbRequest('/pb/todos/create', 'PbCreateTodoRequest', 'PbTodoDetailResponse', { title, contentJson }, true)
+  return assertSuccess(result)
+}
+
+export async function pbGetTodo(todoId) {
+  const result = await pbRequest('/pb/todos/get', 'PbTodoIdRequest', 'PbTodoDetailResponse', { todoId }, true)
+  return assertSuccess(result)
+}
+
+export async function pbUpdateTodo(todoId, title, contentJson) {
+  const result = await pbRequest('/pb/todos/update', 'PbUpdateTodoRequest', 'PbTodoDetailResponse', { todoId, title, contentJson }, true)
+  return assertSuccess(result)
+}
+
+export async function pbDeleteTodo(todoId) {
+  const result = await pbRequest('/pb/todos/delete', 'PbTodoIdRequest', 'PbStatusResponse', { todoId }, true)
   return assertSuccess(result)
 }

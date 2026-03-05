@@ -52,10 +52,38 @@ public class PbShareCodeRequest
 }
 
 [ProtoContract]
+public class PbCreateShareRequest
+{
+    [ProtoMember(1)] public string MapId { get; set; } = string.Empty;
+    [ProtoMember(2)] public bool RequireLogin { get; set; }
+}
+
+[ProtoContract]
 public class PbUpdateSharedRequest
 {
     [ProtoMember(1)] public string ShareCode { get; set; } = string.Empty;
     [ProtoMember(2)] public string ContentJson { get; set; } = string.Empty;
+}
+
+[ProtoContract]
+public class PbTodoIdRequest
+{
+    [ProtoMember(1)] public string TodoId { get; set; } = string.Empty;
+}
+
+[ProtoContract]
+public class PbCreateTodoRequest
+{
+    [ProtoMember(1)] public string Title { get; set; } = string.Empty;
+    [ProtoMember(2)] public string ContentJson { get; set; } = string.Empty;
+}
+
+[ProtoContract]
+public class PbUpdateTodoRequest
+{
+    [ProtoMember(1)] public string TodoId { get; set; } = string.Empty;
+    [ProtoMember(2)] public string Title { get; set; } = string.Empty;
+    [ProtoMember(3)] public string ContentJson { get; set; } = string.Empty;
 }
 
 [ProtoContract]
@@ -85,6 +113,7 @@ public class PbMindMapDetailResponse
     [ProtoMember(5)] public string ContentJson { get; set; } = string.Empty;
     [ProtoMember(6)] public long UpdatedAtUnixMs { get; set; }
     [ProtoMember(7)] public string ShareCode { get; set; } = string.Empty;
+    [ProtoMember(8)] public bool ShareRequireLogin { get; set; }
 }
 
 [ProtoContract]
@@ -94,6 +123,7 @@ public class PbShareResponse
     [ProtoMember(2)] public string Message { get; set; } = string.Empty;
     [ProtoMember(3)] public string ShareCode { get; set; } = string.Empty;
     [ProtoMember(4)] public string RelativeUrl { get; set; } = string.Empty;
+    [ProtoMember(5)] public bool RequireLogin { get; set; }
 }
 
 [ProtoContract]
@@ -101,4 +131,31 @@ public class PbStatusResponse
 {
     [ProtoMember(1)] public bool Success { get; set; }
     [ProtoMember(2)] public string Message { get; set; } = string.Empty;
+}
+
+[ProtoContract]
+public class PbTodoSummary
+{
+    [ProtoMember(1)] public string Id { get; set; } = string.Empty;
+    [ProtoMember(2)] public string Title { get; set; } = string.Empty;
+    [ProtoMember(3)] public long UpdatedAtUnixMs { get; set; }
+}
+
+[ProtoContract]
+public class PbTodoListResponse
+{
+    [ProtoMember(1)] public bool Success { get; set; }
+    [ProtoMember(2)] public string Message { get; set; } = string.Empty;
+    [ProtoMember(3)] public List<PbTodoSummary> Todos { get; set; } = [];
+}
+
+[ProtoContract]
+public class PbTodoDetailResponse
+{
+    [ProtoMember(1)] public bool Success { get; set; }
+    [ProtoMember(2)] public string Message { get; set; } = string.Empty;
+    [ProtoMember(3)] public string Id { get; set; } = string.Empty;
+    [ProtoMember(4)] public string Title { get; set; } = string.Empty;
+    [ProtoMember(5)] public string ContentJson { get; set; } = string.Empty;
+    [ProtoMember(6)] public long UpdatedAtUnixMs { get; set; }
 }

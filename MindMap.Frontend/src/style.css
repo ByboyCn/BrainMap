@@ -208,6 +208,7 @@ label {
 
 input,
 textarea,
+select,
 button {
   width: 100%;
   border: 1px solid #c6d5ef;
@@ -220,6 +221,10 @@ button {
 
 textarea {
   resize: vertical;
+}
+
+select {
+  width: auto;
 }
 
 button {
@@ -268,6 +273,11 @@ button:disabled {
   color: #fff;
 }
 
+.create-type-select {
+  min-width: 132px;
+  width: auto;
+}
+
 .share-box {
   margin-top: 10px;
   border-radius: 10px;
@@ -283,6 +293,22 @@ button:disabled {
 
 .actions button {
   width: auto;
+}
+
+.share-access-toggle {
+  width: auto;
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #344a6b;
+}
+
+.share-access-toggle input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  margin: 0;
 }
 
 .mindmap-canvas-wrap {
@@ -643,6 +669,192 @@ button:disabled {
   border-top: 0;
 }
 
+.todo-page {
+  padding: 10px;
+  height: calc(100vh - 10px);
+  background: linear-gradient(180deg, #0f6d73 0%, #6d959a 100%);
+}
+
+.todo-shell {
+  position: relative;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(220, 238, 240, 0.34);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.todo-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border-bottom: 1px solid rgba(219, 240, 241, 0.25);
+}
+
+.todo-title-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.todo-back {
+  width: auto;
+  white-space: nowrap;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border-color: #a8c3c8;
+  background: #d4e5e8;
+  color: #254b52;
+}
+
+.todo-title-input {
+  flex: 1;
+  min-width: 0;
+  background: rgba(235, 245, 246, 0.88);
+  border-color: rgba(170, 200, 206, 0.8);
+  font-size: 24px;
+  font-weight: 700;
+  color: #f7ffff;
+  background: transparent;
+}
+
+.todo-title-input::placeholder {
+  color: rgba(237, 250, 252, 0.8);
+}
+
+.todo-sort-select {
+  width: auto;
+  min-width: 180px;
+  border-radius: 8px;
+  background: #ebf4f5;
+  color: #254b52;
+}
+
+.todo-body {
+  flex: 1;
+  overflow: auto;
+  padding: 10px 10px 80px;
+}
+
+.todo-group {
+  margin-bottom: 10px;
+}
+
+.todo-group-label {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 8px;
+  background: #c4dce0;
+  color: #2b5056;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  margin-bottom: 6px;
+}
+
+.todo-item-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  margin-bottom: 2px;
+  border-radius: 8px;
+  border: 1px solid rgba(202, 223, 227, 0.38);
+  background: rgba(221, 232, 235, 0.82);
+}
+
+.todo-item-row.done .todo-item-title {
+  text-decoration: line-through;
+  color: #547076;
+}
+
+.todo-check {
+  width: 22px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 2px solid #516a70;
+  background: transparent;
+  color: #f7ffff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.todo-check.checked {
+  background: #516a70;
+}
+
+.todo-item-title {
+  flex: 1;
+  color: #1f4147;
+  font-weight: 500;
+  word-break: break-word;
+}
+
+.todo-item-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.todo-mini {
+  width: auto;
+  border-radius: 6px;
+  padding: 5px 8px;
+  font-size: 12px;
+  line-height: 1;
+  background: #e1ecee;
+  border-color: #afc8cd;
+}
+
+.todo-mini.danger {
+  background: #ee6c73;
+  border-color: #ee6c73;
+  color: #fff;
+}
+
+.todo-editor-bar {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 14px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(203, 223, 227, 0.62);
+  background: rgba(248, 252, 252, 0.9);
+}
+
+.todo-editor-input {
+  flex: 1;
+  margin: 0;
+  border-radius: 6px;
+  border-color: #c5d9dd;
+  background: #f4f9fa;
+}
+
+.todo-add-btn {
+  width: auto;
+  min-width: 88px;
+  border-radius: 6px;
+  padding: 9px 12px;
+}
+
+.todo-status {
+  margin: 0 16px 8px;
+}
+
 .hint {
   color: #6b7b93;
 }
@@ -689,5 +901,27 @@ button:disabled {
 
   .online-top-row {
     justify-content: flex-end;
+  }
+
+  .todo-page {
+    padding: 6px;
+    height: calc(100vh - 6px);
+  }
+
+  .todo-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .todo-sort-select {
+    width: 100%;
+  }
+
+  .todo-item-row {
+    flex-wrap: wrap;
+  }
+
+  .todo-item-actions {
+    margin-left: 30px;
   }
 }

@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json;
 using MindMap.Backend.Contracts;
 using MindMap.Backend.Data;
 using MindMap.Backend.Models;
@@ -23,6 +24,13 @@ public static class PbEndpoints
         maps.MapPost("/update", UpdateMapAsync);
         maps.MapPost("/delete", DeleteMapAsync);
         maps.MapPost("/share", CreateShareAsync);
+
+        var todos = group.MapGroup("/todos").RequireAuthorization();
+        todos.MapPost("/list", ListTodosAsync);
+        todos.MapPost("/create", CreateTodoAsync);
+        todos.MapPost("/get", GetTodoAsync);
+        todos.MapPost("/update", UpdateTodoAsync);
+        todos.MapPost("/delete", DeleteTodoAsync);
 
         var share = group.MapGroup("/share");
         share.MapPost("/get", GetSharedAsync);
@@ -94,9 +102,13 @@ public static class PbEndpoints
     {
         var userId = principal.GetUserId();
 
-        var maps = await db.MindMaps
+        var docs = await db.MindMaps
             .Where(m => m.OwnerId == userId)
             .OrderByDescending(m => m.UpdatedAtUtc)
+            .ToListAsync();
+
+        var maps = docs
+            .Where(m => !IsTodoContent(m.ContentJson))
             .Select(m => new PbMindMapSummary
             {
                 Id = m.Id.ToString(),
@@ -104,7 +116,7 @@ public static class PbEndpoints
                 UpdatedAtUnixMs = new DateTimeOffset(m.UpdatedAtUtc).ToUnixTimeMilliseconds(),
                 ShareCode = m.ShareCode ?? string.Empty
             })
-            .ToListAsync();
+            .ToList();
 
         return PbIo.Write(new PbMindMapListResponse
         {
@@ -120,7 +132,9 @@ public static class PbEndpoints
         {
             OwnerId = principal.GetUserId(),
             Title = string.IsNullOrWhiteSpace(body.Title) ? "Untitled MindMap" : body.Title.Trim(),
-            ContentJson = string.IsNullOrWhiteSpace(body.ContentJson) ? "{\"nodes\":[],\"edges\":[]}" : body.ContentJson
+            ContentJson = string.IsNullOrWhiteSpace(body.ContentJson)
+                ? "{\"docType\":\"mindmap\",\"nodes\":[],\"edges\":[],\"meta\":{\"backgroundColor\":\"#ffffff\"}}"
+                : body.ContentJson
         };
 
         db.MindMaps.Add(entity);
@@ -139,7 +153,7 @@ public static class PbEndpoints
 
         var userId = principal.GetUserId();
         var map = await db.MindMaps.SingleOrDefaultAsync(x => x.Id == mapId && x.OwnerId == userId);
-        if (map is null)
+        if (map is null || IsTodoContent(map.ContentJson))
         {
             return PbIo.Write(new PbMindMapDetailResponse { Success = false, Message = "mindmap not found" });
         }
@@ -157,7 +171,7 @@ public static class PbEndpoints
 
         var userId = principal.GetUserId();
         var map = await db.MindMaps.SingleOrDefaultAsync(x => x.Id == mapId && x.OwnerId == userId);
-        if (map is null)
+        if (map is null || IsTodoContent(map.ContentJson))
         {
             return PbIo.Write(new PbMindMapDetailResponse { Success = false, Message = "mindmap not found" });
         }
@@ -188,7 +202,7 @@ public static class PbEndpoints
 
         var userId = principal.GetUserId();
         var map = await db.MindMaps.SingleOrDefaultAsync(x => x.Id == mapId && x.OwnerId == userId);
-        if (map is null)
+        if (map is null || IsTodoContent(map.ContentJson))
         {
             return PbIo.Write(new PbStatusResponse { Success = false, Message = "mindmap not found" });
         }
@@ -201,7 +215,7 @@ public static class PbEndpoints
 
     private static async Task<IResult> CreateShareAsync(ClaimsPrincipal principal, HttpRequest request, AppDbContext db)
     {
-        var body = await PbIo.ReadAsync<PbMindMapIdRequest>(request);
+        var body = await PbIo.ReadAsync<PbCreateShareRequest>(request);
         if (!Guid.TryParse(body.MapId, out var mapId))
         {
             return PbIo.Write(new PbShareResponse { Success = false, Message = "invalid map id" });
@@ -209,12 +223,13 @@ public static class PbEndpoints
 
         var userId = principal.GetUserId();
         var map = await db.MindMaps.SingleOrDefaultAsync(x => x.Id == mapId && x.OwnerId == userId);
-        if (map is null)
+        if (map is null || IsTodoContent(map.ContentJson))
         {
             return PbIo.Write(new PbShareResponse { Success = false, Message = "mindmap not found" });
         }
 
         map.ShareCode ??= await ShareCodeGenerator.GenerateUniqueCodeAsync(db);
+        map.ShareRequireLogin = body.RequireLogin;
         map.UpdatedAtUtc = DateTime.UtcNow;
         await db.SaveChangesAsync();
 
@@ -222,7 +237,8 @@ public static class PbEndpoints
         {
             Success = true,
             ShareCode = map.ShareCode,
-            RelativeUrl = $"/share/{map.ShareCode}"
+            RelativeUrl = $"/share/{map.ShareCode}",
+            RequireLogin = map.ShareRequireLogin,
         });
     }
 
@@ -235,9 +251,14 @@ public static class PbEndpoints
         }
 
         var map = await db.MindMaps.SingleOrDefaultAsync(x => x.ShareCode == body.ShareCode);
-        if (map is null)
+        if (map is null || IsTodoContent(map.ContentJson))
         {
             return PbIo.Write(new PbMindMapDetailResponse { Success = false, Message = "share link not found" });
+        }
+
+        if (map.ShareRequireLogin && !IsAuthenticated(request.HttpContext))
+        {
+            return PbIo.Write(new PbMindMapDetailResponse { Success = false, Message = "login required for this share link" });
         }
 
         return PbIo.Write(ToDetail(map));
@@ -252,9 +273,14 @@ public static class PbEndpoints
         }
 
         var map = await db.MindMaps.SingleOrDefaultAsync(x => x.ShareCode == body.ShareCode);
-        if (map is null)
+        if (map is null || IsTodoContent(map.ContentJson))
         {
             return PbIo.Write(new PbStatusResponse { Success = false, Message = "share link not found" });
+        }
+
+        if (map.ShareRequireLogin && !IsAuthenticated(request.HttpContext))
+        {
+            return PbIo.Write(new PbStatusResponse { Success = false, Message = "login required for this share link" });
         }
 
         map.ContentJson = string.IsNullOrWhiteSpace(body.ContentJson) ? map.ContentJson : body.ContentJson;
@@ -262,6 +288,119 @@ public static class PbEndpoints
         await db.SaveChangesAsync();
 
         return PbIo.Write(new PbStatusResponse { Success = true, Message = "saved" });
+    }
+
+    private static async Task<IResult> ListTodosAsync(ClaimsPrincipal principal, AppDbContext db)
+    {
+        var userId = principal.GetUserId();
+        var docs = await db.MindMaps
+            .Where(m => m.OwnerId == userId)
+            .OrderByDescending(m => m.UpdatedAtUtc)
+            .ToListAsync();
+
+        var todos = docs
+            .Where(m => IsTodoContent(m.ContentJson))
+            .Select(m => new PbTodoSummary
+            {
+                Id = m.Id.ToString(),
+                Title = m.Title,
+                UpdatedAtUnixMs = new DateTimeOffset(m.UpdatedAtUtc).ToUnixTimeMilliseconds(),
+            })
+            .ToList();
+
+        return PbIo.Write(new PbTodoListResponse
+        {
+            Success = true,
+            Todos = todos,
+        });
+    }
+
+    private static async Task<IResult> CreateTodoAsync(ClaimsPrincipal principal, HttpRequest request, AppDbContext db)
+    {
+        var body = await PbIo.ReadAsync<PbCreateTodoRequest>(request);
+        var entity = new MindMapDocument
+        {
+            OwnerId = principal.GetUserId(),
+            Title = string.IsNullOrWhiteSpace(body.Title) ? "Untitled Todo" : body.Title.Trim(),
+            ContentJson = string.IsNullOrWhiteSpace(body.ContentJson)
+                ? "{\"docType\":\"todo\",\"sortBy\":\"natural\",\"items\":[]}"
+                : body.ContentJson
+        };
+
+        db.MindMaps.Add(entity);
+        await db.SaveChangesAsync();
+
+        return PbIo.Write(ToTodoDetail(entity));
+    }
+
+    private static async Task<IResult> GetTodoAsync(ClaimsPrincipal principal, HttpRequest request, AppDbContext db)
+    {
+        var body = await PbIo.ReadAsync<PbTodoIdRequest>(request);
+        if (!Guid.TryParse(body.TodoId, out var todoId))
+        {
+            return PbIo.Write(new PbTodoDetailResponse { Success = false, Message = "invalid todo id" });
+        }
+
+        var userId = principal.GetUserId();
+        var todo = await db.MindMaps.SingleOrDefaultAsync(x => x.Id == todoId && x.OwnerId == userId);
+        if (todo is null || !IsTodoContent(todo.ContentJson))
+        {
+            return PbIo.Write(new PbTodoDetailResponse { Success = false, Message = "todo not found" });
+        }
+
+        return PbIo.Write(ToTodoDetail(todo));
+    }
+
+    private static async Task<IResult> UpdateTodoAsync(ClaimsPrincipal principal, HttpRequest request, AppDbContext db)
+    {
+        var body = await PbIo.ReadAsync<PbUpdateTodoRequest>(request);
+        if (!Guid.TryParse(body.TodoId, out var todoId))
+        {
+            return PbIo.Write(new PbTodoDetailResponse { Success = false, Message = "invalid todo id" });
+        }
+
+        var userId = principal.GetUserId();
+        var todo = await db.MindMaps.SingleOrDefaultAsync(x => x.Id == todoId && x.OwnerId == userId);
+        if (todo is null || !IsTodoContent(todo.ContentJson))
+        {
+            return PbIo.Write(new PbTodoDetailResponse { Success = false, Message = "todo not found" });
+        }
+
+        if (!string.IsNullOrWhiteSpace(body.Title))
+        {
+            todo.Title = body.Title.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(body.ContentJson))
+        {
+            todo.ContentJson = body.ContentJson;
+        }
+
+        todo.UpdatedAtUtc = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+
+        return PbIo.Write(ToTodoDetail(todo));
+    }
+
+    private static async Task<IResult> DeleteTodoAsync(ClaimsPrincipal principal, HttpRequest request, AppDbContext db)
+    {
+        var body = await PbIo.ReadAsync<PbTodoIdRequest>(request);
+        if (!Guid.TryParse(body.TodoId, out var todoId))
+        {
+            return PbIo.Write(new PbStatusResponse { Success = false, Message = "invalid todo id" });
+        }
+
+        var userId = principal.GetUserId();
+        var todo = await db.MindMaps.SingleOrDefaultAsync(x => x.Id == todoId && x.OwnerId == userId);
+        if (todo is null || !IsTodoContent(todo.ContentJson))
+        {
+            return PbIo.Write(new PbStatusResponse { Success = false, Message = "todo not found" });
+        }
+
+        db.MindMaps.Remove(todo);
+        await db.SaveChangesAsync();
+
+        return PbIo.Write(new PbStatusResponse { Success = true, Message = "deleted" });
     }
 
     private static PbMindMapDetailResponse ToDetail(MindMapDocument map) =>
@@ -272,8 +411,43 @@ public static class PbEndpoints
             Title = map.Title,
             ContentJson = map.ContentJson,
             UpdatedAtUnixMs = new DateTimeOffset(map.UpdatedAtUtc).ToUnixTimeMilliseconds(),
-            ShareCode = map.ShareCode ?? string.Empty
+            ShareCode = map.ShareCode ?? string.Empty,
+            ShareRequireLogin = map.ShareRequireLogin,
         };
+
+    private static PbTodoDetailResponse ToTodoDetail(MindMapDocument todo) =>
+        new()
+        {
+            Success = true,
+            Id = todo.Id.ToString(),
+            Title = todo.Title,
+            ContentJson = todo.ContentJson,
+            UpdatedAtUnixMs = new DateTimeOffset(todo.UpdatedAtUtc).ToUnixTimeMilliseconds(),
+        };
+
+    private static bool IsTodoContent(string contentJson)
+    {
+        if (string.IsNullOrWhiteSpace(contentJson)) return false;
+        try
+        {
+            using var doc = JsonDocument.Parse(contentJson);
+            if (!doc.RootElement.TryGetProperty("docType", out var typeElement))
+            {
+                return false;
+            }
+
+            return string.Equals(typeElement.GetString(), "todo", StringComparison.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static bool IsAuthenticated(HttpContext context)
+    {
+        return context.User?.Identity?.IsAuthenticated == true;
+    }
 
     private static Guid GetUserId(this ClaimsPrincipal principal)
     {

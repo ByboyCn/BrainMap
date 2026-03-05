@@ -1,9 +1,18 @@
-<script setup>
+﻿<script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { clearSession, getSession, saveSession } from '../services/api'
-import { pbCreateMap, pbDeleteMap, pbListMaps, pbLogin, pbRegister } from '../services/pb'
+import {
+  pbCreateMap,
+  pbCreateTodo,
+  pbDeleteMap,
+  pbDeleteTodo,
+  pbListMaps,
+  pbListTodos,
+  pbLogin,
+  pbRegister,
+} from '../services/pb'
 
 const router = useRouter()
 const { t } = useI18n()
@@ -12,8 +21,10 @@ const authForm = reactive({
   userName: '',
   password: '',
 })
+const createType = ref('mindmap')
 const createTitle = ref('')
 const maps = ref([])
+const todos = ref([])
 const busy = ref(false)
 const messageKey = ref('')
 const error = ref('')
@@ -21,10 +32,13 @@ const session = ref(getSession())
 
 const isAuthenticated = computed(() => !!session.value?.token)
 const message = computed(() => (messageKey.value ? t(messageKey.value) : ''))
+const createPlaceholder = computed(() =>
+  createType.value === 'todo' ? t('home.newTodoTitle') : t('home.newMindmapTitle')
+)
 
 onMounted(async () => {
   if (isAuthenticated.value) {
-    await loadMaps()
+    await loadAllDocuments()
   }
 })
 
@@ -47,7 +61,7 @@ async function submitAuth() {
     saveSession(session.value)
     authForm.password = ''
     messageKey.value = authMode.value === 'register' ? 'home.registerSuccess' : 'home.loginSuccess'
-    await loadMaps()
+    await loadAllDocuments()
   } catch (err) {
     error.value = err.message
   } finally {
@@ -59,16 +73,19 @@ function logout() {
   clearSession()
   session.value = null
   maps.value = []
+  todos.value = []
   messageKey.value = 'home.logoutSuccess'
   error.value = ''
 }
 
-async function loadMaps() {
+async function loadAllDocuments() {
   if (!isAuthenticated.value) return
   resetStatus()
   busy.value = true
   try {
-    maps.value = await pbListMaps()
+    const [mindmapList, todoList] = await Promise.all([pbListMaps(), pbListTodos()])
+    maps.value = mindmapList
+    todos.value = todoList
   } catch (err) {
     error.value = err.message
   } finally {
@@ -76,13 +93,24 @@ async function loadMaps() {
   }
 }
 
-async function createMap() {
+async function createDocument() {
   resetStatus()
   busy.value = true
   try {
-    const map = await pbCreateMap(createTitle.value, '{"nodes":[],"edges":[],"meta":{"backgroundColor":"#ffffff"}}')
+    if (createType.value === 'todo') {
+      const todo = await pbCreateTodo(createTitle.value, '{"docType":"todo","sortBy":"natural","items":[]}')
+      createTitle.value = ''
+      await loadAllDocuments()
+      await router.push(`/todo/${todo.id}`)
+      return
+    }
+
+    const map = await pbCreateMap(
+      createTitle.value,
+      '{"docType":"mindmap","nodes":[],"edges":[],"meta":{"backgroundColor":"#ffffff"}}'
+    )
     createTitle.value = ''
-    await loadMaps()
+    await loadAllDocuments()
     await router.push(`/editor/${map.id}`)
   } catch (err) {
     error.value = err.message
@@ -95,18 +123,37 @@ async function openEditor(id) {
   await router.push(`/editor/${id}`)
 }
 
+async function openTodo(id) {
+  await router.push(`/todo/${id}`)
+}
+
 async function deleteMap(id) {
   if (!id) return
-  const ok = window.confirm('确认删除这张脑图吗？')
+  const ok = window.confirm(t('home.deleteMindmapConfirm'))
   if (!ok) return
 
   resetStatus()
   busy.value = true
   try {
     await pbDeleteMap(id)
-    messageKey.value = ''
-    await loadMaps()
-    window.alert('删除成功')
+    await loadAllDocuments()
+  } catch (err) {
+    error.value = err.message
+  } finally {
+    busy.value = false
+  }
+}
+
+async function deleteTodo(id) {
+  if (!id) return
+  const ok = window.confirm(t('home.deleteTodoConfirm'))
+  if (!ok) return
+
+  resetStatus()
+  busy.value = true
+  try {
+    await pbDeleteTodo(id)
+    await loadAllDocuments()
   } catch (err) {
     error.value = err.message
   } finally {
@@ -118,13 +165,13 @@ async function deleteMap(id) {
 <template>
   <main class="page">
     <section class="panel">
-      <h1>脑图工作台</h1>
+      <h1>{{ t('home.title') }}</h1>
       <p class="sub">{{ t('home.subtitle') }}</p>
 
       <div v-if="!isAuthenticated" class="auth">
         <div class="tabs">
-          <button :class="{ active: authMode === 'login' }" @click="authMode = 'login'">脑图登录</button>
-          <button :class="{ active: authMode === 'register' }" @click="authMode = 'register'">脑图注册</button>
+          <button :class="{ active: authMode === 'login' }" @click="authMode = 'login'">{{ t('home.login') }}</button>
+          <button :class="{ active: authMode === 'register' }" @click="authMode = 'register'">{{ t('home.register') }}</button>
         </div>
         <label>
           {{ t('home.username') }}
@@ -135,7 +182,7 @@ async function deleteMap(id) {
           <input v-model="authForm.password" type="password" :placeholder="t('home.inputPassword')" />
         </label>
         <button class="primary" :disabled="busy" @click="submitAuth">
-          {{ authMode === 'register' ? '脑图注册' : '脑图登录' }}
+          {{ authMode === 'register' ? t('home.register') : t('home.login') }}
         </button>
       </div>
 
@@ -143,14 +190,18 @@ async function deleteMap(id) {
         <div class="toolbar">
           <div>{{ t('home.user') }}: {{ session.userName }}</div>
           <div class="actions">
-            <button @click="loadMaps">{{ t('home.refresh') }}</button>
+            <button @click="loadAllDocuments">{{ t('home.refresh') }}</button>
             <button @click="logout">{{ t('home.logout') }}</button>
           </div>
         </div>
 
         <div class="create-row">
-          <input v-model.trim="createTitle" :placeholder="t('home.newMindmapTitle')" />
-          <button class="primary" :disabled="busy" @click="createMap">{{ t('home.create') }}</button>
+          <select v-model="createType" class="create-type-select">
+            <option value="mindmap">{{ t('home.createTypeMindmap') }}</option>
+            <option value="todo">{{ t('home.createTypeTodo') }}</option>
+          </select>
+          <input v-model.trim="createTitle" :placeholder="createPlaceholder" />
+          <button class="primary" :disabled="busy" @click="createDocument">{{ t('home.create') }}</button>
         </div>
 
         <section class="list-page">
@@ -164,7 +215,24 @@ async function deleteMap(id) {
               </div>
               <div class="actions">
                 <button class="primary" @click="openEditor(item.id)">{{ t('home.openEditor') }}</button>
-                <button class="danger" :disabled="busy" @click="deleteMap(item.id)">删除</button>
+                <button class="danger" :disabled="busy" @click="deleteMap(item.id)">{{ t('home.delete') }}</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="list-page">
+          <h3>{{ t('home.myTodos') }}</h3>
+          <div v-if="todos.length === 0" class="hint">{{ t('home.noTodo') }}</div>
+          <div v-else class="map-items">
+            <div v-for="item in todos" :key="item.id" class="map-item">
+              <div>
+                <strong>{{ item.title }}</strong>
+                <div class="hint">{{ new Date(item.updatedAtUnixMs).toLocaleString() }}</div>
+              </div>
+              <div class="actions">
+                <button class="primary" @click="openTodo(item.id)">{{ t('home.openTodo') }}</button>
+                <button class="danger" :disabled="busy" @click="deleteTodo(item.id)">{{ t('home.delete') }}</button>
               </div>
             </div>
           </div>

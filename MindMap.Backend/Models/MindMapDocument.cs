@@ -16,6 +16,7 @@ public class MindMapDocument
 
     [MaxLength(24)]
     public string? ShareCode { get; set; }
+    public bool ShareRequireLogin { get; set; }
 
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;

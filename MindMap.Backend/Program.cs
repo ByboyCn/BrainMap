@@ -67,6 +67,7 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.EnsureCreated();
+    EnsureSqliteColumns(db);
 }
 
 if (app.Environment.IsDevelopment())
@@ -247,6 +248,18 @@ app.MapPbEndpoints();
 app.MapHub<ShareHub>("/hubs/share");
 
 app.Run();
+
+static void EnsureSqliteColumns(AppDbContext db)
+{
+    try
+    {
+        db.Database.ExecuteSqlRaw("ALTER TABLE MindMaps ADD COLUMN ShareRequireLogin INTEGER NOT NULL DEFAULT 0;");
+    }
+    catch
+    {
+        // ignore when column already exists
+    }
+}
 
 record RegisterRequest(string UserName, string Password);
 record LoginRequest(string UserName, string Password);
