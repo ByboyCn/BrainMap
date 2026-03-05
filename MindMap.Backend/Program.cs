@@ -67,7 +67,7 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.EnsureCreated();
-    EnsureSqliteColumns(db);
+    EnsureSqliteSchema(db);
 }
 
 if (app.Environment.IsDevelopment())
@@ -249,7 +249,7 @@ app.MapHub<ShareHub>("/hubs/share");
 
 app.Run();
 
-static void EnsureSqliteColumns(AppDbContext db)
+static void EnsureSqliteSchema(AppDbContext db)
 {
     try
     {
@@ -259,6 +259,26 @@ static void EnsureSqliteColumns(AppDbContext db)
     {
         // ignore when column already exists
     }
+
+    db.Database.ExecuteSqlRaw(
+        """
+        CREATE TABLE IF NOT EXISTS MindMapShareHistories (
+            Id INTEGER NOT NULL CONSTRAINT PK_MindMapShareHistories PRIMARY KEY AUTOINCREMENT,
+            MindMapId TEXT NOT NULL,
+            ShareCode TEXT NOT NULL,
+            ActionType TEXT NOT NULL,
+            ActorId TEXT NOT NULL DEFAULT '',
+            ActorDisplayName TEXT NOT NULL DEFAULT '',
+            DetailJson TEXT NOT NULL DEFAULT '{}',
+            ClientIp TEXT NOT NULL DEFAULT '',
+            CreatedAtUtc TEXT NOT NULL,
+            CONSTRAINT FK_MindMapShareHistories_MindMaps_MindMapId FOREIGN KEY (MindMapId) REFERENCES MindMaps (Id) ON DELETE CASCADE
+        );
+        """
+    );
+    db.Database.ExecuteSqlRaw(
+        "CREATE INDEX IF NOT EXISTS IX_MindMapShareHistories_ShareCode_CreatedAtUtc ON MindMapShareHistories (ShareCode, CreatedAtUtc);"
+    );
 }
 
 record RegisterRequest(string UserName, string Password);

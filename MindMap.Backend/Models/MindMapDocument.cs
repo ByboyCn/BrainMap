@@ -18,6 +18,8 @@ public class MindMapDocument
     public string? ShareCode { get; set; }
     public bool ShareRequireLogin { get; set; }
 
+    public List<MindMapShareHistory> ShareHistories { get; set; } = [];
+
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
 }

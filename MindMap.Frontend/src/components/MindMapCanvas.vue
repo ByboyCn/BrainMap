@@ -251,7 +251,7 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits(['update:modelValue', 'operation'])
 const wrapperRef = ref(null)
 const containerRef = ref(null)
 const backgroundColor = ref(DEFAULT_BG_COLOR)
@@ -436,6 +436,15 @@ function updateBoxSelectRectStyle() {
   }
 }
 
+function emitOperation(actionType, detail = {}) {
+  if (!actionType) return
+  emit('operation', {
+    actionType,
+    detail,
+    atUnixMs: Date.now(),
+  })
+}
+
 function isRectOverlap(a, b) {
   const overlapWidth = Math.min(a.right, b.right) - Math.max(a.left, b.left)
   const overlapHeight = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top)
@@ -497,6 +506,10 @@ function createMainNodeAt(graphX, graphY) {
   if (!added?.id) return null
   setSelectedNode(added.id, { replace: true })
   syncToModel()
+  emitOperation('node_add', {
+    nodeId: added.id,
+    parentNodeId: '',
+  })
   return added
 }
 
@@ -643,6 +656,10 @@ function addNodeWithParent(parentNode, x, y) {
   lf.addEdge(buildMindmapEdge(parentNode.id, added.id))
   setSelectedNode(added.id, { replace: true })
   layoutAllTrees()
+  emitOperation('node_add', {
+    nodeId: added.id,
+    parentNodeId: parentNode.id,
+  })
   return added
 }
 
@@ -653,7 +670,7 @@ function addFreeNode() {
   const base = nodes[nodes.length - 1]
   const x = base ? base.x + 120 : 320
   const y = base ? base.y + 60 : 220
-  lf.addNode({
+  const added = lf.addNode({
     id: `n-${Date.now()}-${nodeCounter++}`,
     type: MINDMAP_NODE_TYPE,
     x,
@@ -666,6 +683,12 @@ function addFreeNode() {
     },
   })
   syncToModel()
+  if (added?.id) {
+    emitOperation('node_add', {
+      nodeId: added.id,
+      parentNodeId: '',
+    })
+  }
 }
 
 function addChildNode() {
@@ -1154,6 +1177,10 @@ function reparentNode(draggedNodeId, targetParentId) {
   }
 
   layoutAllTrees()
+  emitOperation('node_reparent', {
+    nodeId: draggedNodeId,
+    parentNodeId: targetParentId,
+  })
 }
 
 function deleteSelectedSubtree() {
@@ -1170,8 +1197,9 @@ function deleteSelectedSubtree() {
     collectSubtreeNodeIds(nodeId).forEach((subId) => nodeIdsToDelete.add(subId))
   })
   if (nodeIdsToDelete.size === 0) return
+  const deletedNodeIds = Array.from(nodeIdsToDelete)
 
-  Array.from(nodeIdsToDelete)
+  deletedNodeIds
     .reverse()
     .forEach((nodeId) => {
       if (lf.getDataById(nodeId)?.id) {
@@ -1199,6 +1227,10 @@ function deleteSelectedSubtree() {
   } else {
     layoutAllTrees()
   }
+  emitOperation('node_delete', {
+    count: deletedNodeIds.length,
+    nodeIds: deletedNodeIds.slice(0, 20),
+  })
 }
 
 function toggleSelectedCollapse() {

@@ -49,6 +49,18 @@ message PbUpdateSharedRequest {
   string contentJson = 2;
 }
 
+message PbShareHistoryListRequest {
+  string shareCode = 1;
+  int32 limit = 2;
+}
+
+message PbShareHistoryAddRequest {
+  string shareCode = 1;
+  string actionType = 2;
+  string detailJson = 3;
+  string actorDisplayName = 4;
+}
+
 message PbTodoIdRequest {
   string todoId = 1;
 }
@@ -99,6 +111,21 @@ message PbShareResponse {
 message PbStatusResponse {
   bool success = 1;
   string message = 2;
+}
+
+message PbShareHistoryItem {
+  int64 id = 1;
+  string shareCode = 2;
+  string actionType = 3;
+  string actorDisplayName = 4;
+  string detailJson = 5;
+  int64 createdAtUnixMs = 6;
+}
+
+message PbShareHistoryListResponse {
+  bool success = 1;
+  string message = 2;
+  repeated PbShareHistoryItem items = 3;
 }
 
 message PbTodoSummary {
@@ -220,6 +247,28 @@ export async function pbGetShared(shareCode) {
 
 export async function pbUpdateShared(shareCode, contentJson) {
   const result = await pbRequest('/pb/share/update', 'PbUpdateSharedRequest', 'PbStatusResponse', { shareCode, contentJson }, true)
+  return assertSuccess(result)
+}
+
+export async function pbGetShareHistory(shareCode, limit = 40) {
+  const result = await pbRequest(
+    '/pb/share/history/list',
+    'PbShareHistoryListRequest',
+    'PbShareHistoryListResponse',
+    { shareCode, limit },
+    true
+  )
+  return assertSuccess(result).items
+}
+
+export async function pbAddShareHistory(shareCode, actionType, detailJson = '{}', actorDisplayName = '') {
+  const result = await pbRequest(
+    '/pb/share/history/add',
+    'PbShareHistoryAddRequest',
+    'PbStatusResponse',
+    { shareCode, actionType, detailJson, actorDisplayName },
+    true
+  )
   return assertSuccess(result)
 }
 

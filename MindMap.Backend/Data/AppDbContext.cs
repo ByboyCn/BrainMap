@@ -7,6 +7,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 {
     public DbSet<User> Users => Set<User>();
     public DbSet<MindMapDocument> MindMaps => Set<MindMapDocument>();
+    public DbSet<MindMapShareHistory> MindMapShareHistories => Set<MindMapShareHistory>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -28,6 +29,22 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             entity.HasOne(x => x.Owner)
                 .WithMany(u => u.MindMaps)
                 .HasForeignKey(x => x.OwnerId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<MindMapShareHistory>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.ShareCode).HasMaxLength(24);
+            entity.Property(x => x.ActionType).HasMaxLength(48);
+            entity.Property(x => x.ActorId).HasMaxLength(64);
+            entity.Property(x => x.ActorDisplayName).HasMaxLength(64);
+            entity.Property(x => x.ClientIp).HasMaxLength(64);
+            entity.Property(x => x.DetailJson).HasDefaultValue("{}");
+            entity.HasIndex(x => new { x.ShareCode, x.CreatedAtUtc });
+            entity.HasOne(x => x.MindMap)
+                .WithMany(m => m.ShareHistories)
+                .HasForeignKey(x => x.MindMapId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }

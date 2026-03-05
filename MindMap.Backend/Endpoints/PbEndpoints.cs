@@ -35,6 +35,8 @@ public static class PbEndpoints
         var share = group.MapGroup("/share");
         share.MapPost("/get", GetSharedAsync);
         share.MapPost("/update", UpdateSharedAsync);
+        share.MapPost("/history/list", GetShareHistoryAsync);
+        share.MapPost("/history/add", AddShareHistoryAsync);
 
         return app;
     }
@@ -261,6 +263,8 @@ public static class PbEndpoints
             return PbIo.Write(new PbMindMapDetailResponse { Success = false, Message = "login required for this share link" });
         }
 
+        await LogShareHistoryAsync(request.HttpContext, db, map, "open", "{\"source\":\"share\"}");
+
         return PbIo.Write(ToDetail(map));
     }
 
@@ -288,6 +292,76 @@ public static class PbEndpoints
         await db.SaveChangesAsync();
 
         return PbIo.Write(new PbStatusResponse { Success = true, Message = "saved" });
+    }
+
+    private static async Task<IResult> GetShareHistoryAsync(HttpRequest request, AppDbContext db)
+    {
+        var body = await PbIo.ReadAsync<PbShareHistoryListRequest>(request);
+        var shareCode = body.ShareCode?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(shareCode))
+        {
+            return PbIo.Write(new PbShareHistoryListResponse { Success = false, Message = "share code is required" });
+        }
+
+        var map = await db.MindMaps.SingleOrDefaultAsync(x => x.ShareCode == shareCode);
+        if (map is null || IsTodoContent(map.ContentJson))
+        {
+            return PbIo.Write(new PbShareHistoryListResponse { Success = false, Message = "share link not found" });
+        }
+
+        if (map.ShareRequireLogin && !IsAuthenticated(request.HttpContext))
+        {
+            return PbIo.Write(new PbShareHistoryListResponse { Success = false, Message = "login required for this share link" });
+        }
+
+        var limit = Math.Clamp(body.Limit <= 0 ? 40 : body.Limit, 1, 200);
+        var items = await db.MindMapShareHistories
+            .Where(x => x.ShareCode == shareCode)
+            .OrderByDescending(x => x.CreatedAtUtc)
+            .Take(limit)
+            .Select(x => new PbShareHistoryItem
+            {
+                Id = x.Id,
+                ShareCode = x.ShareCode,
+                ActionType = x.ActionType,
+                ActorDisplayName = x.ActorDisplayName,
+                DetailJson = x.DetailJson,
+                CreatedAtUnixMs = new DateTimeOffset(x.CreatedAtUtc).ToUnixTimeMilliseconds(),
+            })
+            .ToListAsync();
+
+        return PbIo.Write(new PbShareHistoryListResponse
+        {
+            Success = true,
+            Items = items,
+        });
+    }
+
+    private static async Task<IResult> AddShareHistoryAsync(HttpRequest request, AppDbContext db)
+    {
+        var body = await PbIo.ReadAsync<PbShareHistoryAddRequest>(request);
+        var shareCode = body.ShareCode?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(shareCode))
+        {
+            return PbIo.Write(new PbStatusResponse { Success = false, Message = "share code is required" });
+        }
+
+        var map = await db.MindMaps.SingleOrDefaultAsync(x => x.ShareCode == shareCode);
+        if (map is null || IsTodoContent(map.ContentJson))
+        {
+            return PbIo.Write(new PbStatusResponse { Success = false, Message = "share link not found" });
+        }
+
+        if (map.ShareRequireLogin && !IsAuthenticated(request.HttpContext))
+        {
+            return PbIo.Write(new PbStatusResponse { Success = false, Message = "login required for this share link" });
+        }
+
+        var actionType = NormalizeActionType(body.ActionType);
+        var detailJson = NormalizeDetailJson(body.DetailJson);
+        await LogShareHistoryAsync(request.HttpContext, db, map, actionType, detailJson, body.ActorDisplayName);
+
+        return PbIo.Write(new PbStatusResponse { Success = true, Message = "history saved" });
     }
 
     private static async Task<IResult> ListTodosAsync(ClaimsPrincipal principal, AppDbContext db)
@@ -447,6 +521,68 @@ public static class PbEndpoints
     private static bool IsAuthenticated(HttpContext context)
     {
         return context.User?.Identity?.IsAuthenticated == true;
+    }
+
+    private static async Task LogShareHistoryAsync(
+        HttpContext context,
+        AppDbContext db,
+        MindMapDocument map,
+        string actionType,
+        string detailJson,
+        string? actorDisplayNameOverride = null)
+    {
+        var actorId = context.User?.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+        var actorName = string.IsNullOrWhiteSpace(actorDisplayNameOverride)
+            ? context.User?.Identity?.Name ?? "Guest"
+            : actorDisplayNameOverride.Trim();
+        var clientIp = context.Connection.RemoteIpAddress?.ToString() ?? string.Empty;
+
+        db.MindMapShareHistories.Add(new MindMapShareHistory
+        {
+            MindMapId = map.Id,
+            ShareCode = map.ShareCode ?? string.Empty,
+            ActionType = NormalizeActionType(actionType),
+            ActorId = actorId.Length > 64 ? actorId[..64] : actorId,
+            ActorDisplayName = actorName.Length > 64 ? actorName[..64] : actorName,
+            DetailJson = NormalizeDetailJson(detailJson),
+            ClientIp = clientIp.Length > 64 ? clientIp[..64] : clientIp,
+            CreatedAtUtc = DateTime.UtcNow,
+        });
+
+        await db.SaveChangesAsync();
+    }
+
+    private static string NormalizeActionType(string? actionType)
+    {
+        var normalized = string.IsNullOrWhiteSpace(actionType)
+            ? "update"
+            : actionType.Trim().ToLowerInvariant();
+        return normalized.Length > 48 ? normalized[..48] : normalized;
+    }
+
+    private static string NormalizeDetailJson(string? detailJson)
+    {
+        if (string.IsNullOrWhiteSpace(detailJson))
+        {
+            return "{}";
+        }
+
+        var raw = detailJson.Trim();
+        if (raw.Length > 4096)
+        {
+            raw = raw[..4096];
+        }
+
+        try
+        {
+            using var _ = JsonDocument.Parse(raw);
+            return raw;
+        }
+        catch
+        {
+            var text = raw.Length > 512 ? raw[..512] : raw;
+            return JsonSerializer.Serialize(new { text });
+        }
     }
 
     private static Guid GetUserId(this ClaimsPrincipal principal)

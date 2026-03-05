@@ -67,6 +67,16 @@ const messages = {
       backHome: '返回首页',
       autoSave: '自动保存',
       onlineUsers: '在线用户',
+      historyTitle: '修改历史',
+      historyLoading: '加载中...',
+      historyEmpty: '暂无历史记录',
+      historyAction: {
+        open: '打开页面',
+        nodeAdd: '新增节点',
+        nodeDelete: '删除节点',
+        nodeReparent: '调整父子关系',
+        unknown: '其他修改',
+      },
       saved: '共享内容已保存',
       autoSaved: '自动保存成功',
       state: {
@@ -196,6 +206,16 @@ const messages = {
       backHome: 'Back Home',
       autoSave: 'Auto save',
       onlineUsers: 'Online Users',
+      historyTitle: 'History',
+      historyLoading: 'Loading...',
+      historyEmpty: 'No history yet',
+      historyAction: {
+        open: 'Opened',
+        nodeAdd: 'Node added',
+        nodeDelete: 'Node deleted',
+        nodeReparent: 'Parent changed',
+        unknown: 'Other update',
+      },
       saved: 'Shared content saved',
       autoSaved: 'Auto saved',
       state: {

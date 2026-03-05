@@ -66,6 +66,22 @@ public class PbUpdateSharedRequest
 }
 
 [ProtoContract]
+public class PbShareHistoryListRequest
+{
+    [ProtoMember(1)] public string ShareCode { get; set; } = string.Empty;
+    [ProtoMember(2)] public int Limit { get; set; } = 40;
+}
+
+[ProtoContract]
+public class PbShareHistoryAddRequest
+{
+    [ProtoMember(1)] public string ShareCode { get; set; } = string.Empty;
+    [ProtoMember(2)] public string ActionType { get; set; } = string.Empty;
+    [ProtoMember(3)] public string DetailJson { get; set; } = string.Empty;
+    [ProtoMember(4)] public string ActorDisplayName { get; set; } = string.Empty;
+}
+
+[ProtoContract]
 public class PbTodoIdRequest
 {
     [ProtoMember(1)] public string TodoId { get; set; } = string.Empty;
@@ -131,6 +147,25 @@ public class PbStatusResponse
 {
     [ProtoMember(1)] public bool Success { get; set; }
     [ProtoMember(2)] public string Message { get; set; } = string.Empty;
+}
+
+[ProtoContract]
+public class PbShareHistoryItem
+{
+    [ProtoMember(1)] public long Id { get; set; }
+    [ProtoMember(2)] public string ShareCode { get; set; } = string.Empty;
+    [ProtoMember(3)] public string ActionType { get; set; } = string.Empty;
+    [ProtoMember(4)] public string ActorDisplayName { get; set; } = string.Empty;
+    [ProtoMember(5)] public string DetailJson { get; set; } = string.Empty;
+    [ProtoMember(6)] public long CreatedAtUnixMs { get; set; }
+}
+
+[ProtoContract]
+public class PbShareHistoryListResponse
+{
+    [ProtoMember(1)] public bool Success { get; set; }
+    [ProtoMember(2)] public string Message { get; set; } = string.Empty;
+    [ProtoMember(3)] public List<PbShareHistoryItem> Items { get; set; } = [];
 }
 
 [ProtoContract]
