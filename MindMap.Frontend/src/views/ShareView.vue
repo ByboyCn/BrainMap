@@ -8,6 +8,13 @@ import { setLocale } from '../i18n'
 import { getApiBaseUrl, getSession } from '../services/api'
 import { pbAddShareHistory, pbCreateShare, pbGetShared, pbUpdateShared } from '../services/pb'
 
+const props = defineProps({
+  initialPayload: {
+    type: Object,
+    default: null,
+  },
+})
+
 const route = useRoute()
 const router = useRouter()
 const { t, locale } = useI18n()
@@ -169,7 +176,7 @@ function scheduleBroadcast() {
 
 async function loadMap() {
   try {
-    const payload = await pbGetShared(shareCode)
+    const payload = props.initialPayload || (await pbGetShared(shareCode))
     mapId.value = payload.id || ''
     mapTitle.value = payload.title
     shareEnabled.value = !!payload.shareEnabled

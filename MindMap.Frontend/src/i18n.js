@@ -65,6 +65,7 @@ const messages = {
     },
     share: {
       title: '分享脑图',
+      loading: '加载中...',
       mapPrefix: '脑图',
       modeEditable: '可编辑',
       modeReadonly: '只读',
@@ -219,6 +220,7 @@ const messages = {
     },
     share: {
       title: 'Shared MindMap',
+      loading: 'Loading...',
       mapPrefix: 'MindMap',
       modeEditable: 'Editable',
       modeReadonly: 'Read-only',

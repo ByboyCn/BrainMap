@@ -300,7 +300,7 @@ public static class PbEndpoints
         }
 
         var map = await db.MindMaps.SingleOrDefaultAsync(x => x.ShareCode == body.ShareCode);
-        if (map is null || IsTodoContent(map.ContentJson))
+        if (map is null)
         {
             return PbIo.Write(new PbMindMapDetailResponse { Success = false, Message = "share link not found" });
         }
@@ -329,7 +329,7 @@ public static class PbEndpoints
         }
 
         var map = await db.MindMaps.SingleOrDefaultAsync(x => x.ShareCode == body.ShareCode);
-        if (map is null || IsTodoContent(map.ContentJson))
+        if (map is null)
         {
             return PbIo.Write(new PbStatusResponse { Success = false, Message = "share link not found" });
         }
@@ -361,7 +361,7 @@ public static class PbEndpoints
         }
 
         var map = await db.MindMaps.SingleOrDefaultAsync(x => x.ShareCode == shareCode);
-        if (map is null || IsTodoContent(map.ContentJson))
+        if (map is null)
         {
             return PbIo.Write(new PbShareHistoryListResponse { Success = false, Message = "share link not found" });
         }
@@ -409,7 +409,7 @@ public static class PbEndpoints
         }
 
         var map = await db.MindMaps.SingleOrDefaultAsync(x => x.ShareCode == shareCode);
-        if (map is null || IsTodoContent(map.ContentJson))
+        if (map is null)
         {
             return PbIo.Write(new PbStatusResponse { Success = false, Message = "share link not found" });
         }

@@ -127,7 +127,31 @@ async function openEditor(id) {
 }
 
 async function openTodo(id) {
-  await router.push(`/todo/${id}`)
+  if (!id) return
+  resetStatus()
+  busy.value = true
+  try {
+    const item = todos.value.find((todoItem) => todoItem.id === id)
+    if (!item) return
+
+    const requireLogin = !!item.shareRequireLogin
+    const guestCanEdit = requireLogin ? false : !!item.shareAllowGuestEdit
+    const result = await pbCreateTodoShare(item.id, requireLogin, true, guestCanEdit)
+    item.shareCode = result.shareCode || item.shareCode || ''
+    item.shareEnabled = !!result.enabled
+    item.shareRequireLogin = !!result.requireLogin
+    item.shareAllowGuestEdit = !!result.guestCanEdit
+
+    if (!item.shareCode) {
+      throw new Error('share code is empty')
+    }
+
+    await router.push(`/share/${item.shareCode}`)
+  } catch (err) {
+    error.value = err.message
+  } finally {
+    busy.value = false
+  }
 }
 
 async function deleteMap(id) {
@@ -322,6 +346,13 @@ function getShareUrl(shareCode) {
                     >
                       {{ t('home.applyShareSettings') }}
                     </button>
+                    <a
+                      v-if="item.shareEnabled && item.shareCode"
+                      :href="getShareUrl(item.shareCode)"
+                      target="_blank"
+                    >
+                      {{ t('home.shareLink') }}
+                    </a>
                   </div>
                 </div>
               </div>
