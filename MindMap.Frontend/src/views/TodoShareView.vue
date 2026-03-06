@@ -562,7 +562,7 @@ async function backHome() {
                         :disabled="!canEditShared"
                         @click.stop="toggleSubtaskByItem(item.id, subtask.id)"
                       >
-                        {{ subtask.done ? '\\u2713' : '' }}
+                        {{ subtask.done ? '\u2713' : '' }}
                       </button>
                       <span class="todo-inline-subtask-text" :class="{ done: subtask.done }">{{ subtask.title }}</span>
                     </div>
@@ -584,7 +584,7 @@ async function backHome() {
                 :class="{ active: item.id === selectedItemId }"
                 @click="selectItem(item.id)"
               >
-                <button class="todo-check checked" :disabled="!canEditShared" @click.stop="toggleCompleted(item.id)">{{ '\\u2713' }}</button>
+                <button class="todo-check checked" :disabled="!canEditShared" @click.stop="toggleCompleted(item.id)">{{ '\u2713' }}</button>
                 <div class="todo-item-main">
                   <div class="todo-item-title">{{ item.title }}</div>
                   <div v-if="item.subtasks.length" class="todo-item-sub">{{ getSubtaskSummary(item) }}</div>
@@ -596,7 +596,7 @@ async function backHome() {
                         :disabled="!canEditShared"
                         @click.stop="toggleSubtaskByItem(item.id, subtask.id)"
                       >
-                        {{ subtask.done ? '\\u2713' : '' }}
+                        {{ subtask.done ? '\u2713' : '' }}
                       </button>
                       <span class="todo-inline-subtask-text" :class="{ done: subtask.done }">{{ subtask.title }}</span>
                     </div>
@@ -630,7 +630,7 @@ async function backHome() {
                         :disabled="!canEditShared"
                         @click.stop="toggleSubtaskByItem(item.id, subtask.id)"
                       >
-                        {{ subtask.done ? '\\u2713' : '' }}
+                        {{ subtask.done ? '\u2713' : '' }}
                       </button>
                       <span class="todo-inline-subtask-text" :class="{ done: subtask.done }">{{ subtask.title }}</span>
                     </div>
@@ -652,7 +652,7 @@ async function backHome() {
                 :class="{ active: item.id === selectedItemId }"
                 @click="selectItem(item.id)"
               >
-                <button class="todo-check checked" :disabled="!canEditShared" @click.stop="toggleCompleted(item.id)">{{ '\\u2713' }}</button>
+                <button class="todo-check checked" :disabled="!canEditShared" @click.stop="toggleCompleted(item.id)">{{ '\u2713' }}</button>
                 <div class="todo-item-main">
                   <div class="todo-item-title">{{ item.title }}</div>
                   <div v-if="item.subtasks.length" class="todo-item-sub">{{ getSubtaskSummary(item) }}</div>
@@ -664,7 +664,7 @@ async function backHome() {
                         :disabled="!canEditShared"
                         @click.stop="toggleSubtaskByItem(item.id, subtask.id)"
                       >
-                        {{ subtask.done ? '\\u2713' : '' }}
+                        {{ subtask.done ? '\u2713' : '' }}
                       </button>
                       <span class="todo-inline-subtask-text" :class="{ done: subtask.done }">{{ subtask.title }}</span>
                     </div>
@@ -714,7 +714,7 @@ async function backHome() {
             <div class="todo-detail-label">{{ t('todo.subtasks') }}</div>
             <div v-for="subtask in selectedItem.subtasks" :key="subtask.id" class="todo-subtask-row">
               <button class="todo-subtask-check" :class="{ checked: subtask.done }" :disabled="!canEditShared" @click="toggleSubtask(subtask.id)">
-                {{ subtask.done ? '\\u2713' : '' }}
+                {{ subtask.done ? '\u2713' : '' }}
               </button>
               <span class="todo-subtask-text" :class="{ done: subtask.done }">{{ subtask.title }}</span>
               <button class="todo-mini danger" :disabled="!canEditShared" @click="removeSubtask(subtask.id)">{{ t('home.delete') }}</button>
@@ -798,4 +798,3 @@ async function backHome() {
     </section>
   </main>
 </template>
-
